@@ -119,9 +119,9 @@ class INDIController(object):
         self.q_lpf = LPF(self.ts, 50, 0.0)
         self.u_lpf = LPF(self.ts, 50, np.zeros((3,1)))
 
-        self.k1 = 50
-        self.k2 = 50
-        self.k3 = 10
+        self.k1 = 100
+        self.k2 = 100
+        self.k3 = 30
 
         self.integrals = 0.0
 
@@ -131,7 +131,7 @@ class INDIController(object):
         f_z = self.f_z_lpf.calc(f_z)
 
         self.integrals += (f_z_des - f_z) * self.ts
-        # self.integrals = np.clip(self.integrals, -0.5, 0.5)
+        self.integrals = np.clip(self.integrals, -1.0, 1.0)
         v_in = np.array([[p_des_dot+self.k1*(p_des-p)],[q_des_dot+self.k2*(q_des-q)],[f_z_des+self.k3*self.integrals]])
         y_f_dot = np.array([[p_dot],[q_dot],[f_z]])
         u_f = self.u_lpf.calc(u)
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     show_list2 = []
     show_list3 = []
     R_list = []
-    for i in range(100):
+    for i in range(300):
         if i==87:
             print(1)
         print("****** ",i," ******")

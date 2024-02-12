@@ -45,12 +45,13 @@ class UAVModel(object):
             ),
         )
         self.R = ca.Function("R", [state], [R])
-        self.AllocationMatrix = np.array([[0, body_length, 0, -body_length],
-                                     [-body_length, 0, body_length, 0],
+        l = body_length / np.sqrt(2)
+        self.AllocationMatrix = np.array([[l, l, -l, -l],
+                                     [-l, l, l, -l],
                                      [km, -km, km, -km],
                                      [1, 1, 1, 1]])
-        self.AllocationMatrix_failed = np.array([[0, body_length, 0],
-                                     [-body_length, 0, body_length],
+        self.AllocationMatrix_failed = np.array([[l, l, -l],
+                                     [-l, l, l],
                                      [1, 1, 1]])
         temp = self.AllocationMatrix@f_real
         F = ca.vertcat(np.zeros([2, 1]), temp[3])
