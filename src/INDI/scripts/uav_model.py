@@ -147,6 +147,7 @@ class UAVModel(object):
         state_dot = np.array(self.state_dot(self.state, self.action, self.state_noise, self.k))
         acc_I = state_dot[3:6].reshape(-1, 1) + np.array([0, 0, 9.81]).reshape(-1, 1)
         acc_B = R @ acc_I
+        # acc_B 为模拟加速度计测量值
         return obs, R, acc_B
 
 if __name__ == "__main__":

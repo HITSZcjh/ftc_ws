@@ -56,6 +56,8 @@ class PositionController(object):
         self.integrals = np.clip(self.integrals, -self.int_lim, self.int_lim)
         self.acc_I_des = self.kp_vel * vel_err + self.ki_vel * self.integrals
         
+        # self.acc_I_des = np.zeros((3,1))
+
         lat_ratio = np.linalg.norm(self.acc_I_des[:2,0])/self.max_lateral
         if lat_ratio > 1:
             self.acc_I_des[:2,0] /= lat_ratio
@@ -70,13 +72,13 @@ class PrimaryAxisAttitudeController(object):
         self.ts = ts
         self.g = np.array([[0],[0],[-9.81]])
 
-        self.n_B = np.array([[0.0],[0.0],[1.00]])
-        self.kx = 0.02
-        self.ky = 0.02
+        self.n_B = np.array([[0.1],[0.1],[0.98]])
+        self.kx = 0.1
+        self.ky = 0.1
 
-        self.p_lpf = LPF(self.ts, BW, 0.0)
-        self.q_lpf = LPF(self.ts, BW, 0.0)
-
+        self.p_des_lpf = LPF(self.ts, BW, 0.0)
+        self.q_des_lpf = LPF(self.ts, BW, 0.0)
+        self.f_z_des_lpf = LPF(self.ts, BW, 0.0)
         self.n_des_B = None
     def calc(self, R, r, acc_I_des, n_des_I, n_des_I_dot):
         self.n_des_B = R@n_des_I
@@ -92,47 +94,49 @@ class PrimaryAxisAttitudeController(object):
         temp1 = temp@(vout-r*np.array([[h2],[-h1]])-n_des_I_hat_dot)
         p_des = temp1[0,0]
         q_des = temp1[1,0]
-        _, p_des_dot = self.p_lpf.calc_with_derivative(p_des)
-        _, q_des_dot = self.q_lpf.calc_with_derivative(q_des)
+        p_des, p_des_dot = self.p_des_lpf.calc_with_derivative(p_des)
+        q_des, q_des_dot = self.q_des_lpf.calc_with_derivative(q_des)
         # acc_z_des = (R@acc_I_des)[2,0]
-        acc_z_des = np.linalg.norm(acc_I_des-self.g)/n_B_z
-        return p_des, q_des, acc_z_des, p_des_dot, q_des_dot
+        f_z_des = np.linalg.norm(acc_I_des-self.g)/n_B_z
+        f_z_des = self.f_z_des_lpf.calc(f_z_des)
+        return p_des, q_des, f_z_des, p_des_dot, q_des_dot
 
 class INDIController(object):
-    def __init__(self, ts) -> None:
+    def __init__(self, ts, AllocationMatrix_failed) -> None:
         self.ts = ts
-        self.tau_x = 0.0
-        self.tau_y = 0.0
-        self.f_z = 0.0
 
         self.Ix = 0.007
         self.Iy = 0.007
         self.m = 0.716
+        self.G = np.diagflat([1/self.Ix,1/self.Iy,1/self.m])@AllocationMatrix_failed
 
-        self.tau_x_lpf = LPF(self.ts, 50, 0.0)
-        self.tau_y_lpf = LPF(self.ts, 50, 0.0)
+        self.tau_x = 0.0
+        self.tau_y = 0.0
+        self.f_z = 0.0
+
         self.f_z_lpf = LPF(self.ts, 50, 0.0)
         self.p_lpf = LPF(self.ts, 50, 0.0)
         self.q_lpf = LPF(self.ts, 50, 0.0)
-        self.acc_z_lpf = LPF(self.ts, 50, 0.0)
-        self.acc_z_des_lpf = LPF(self.ts, 50, 0.0)
+        self.u_lpf = LPF(self.ts, 50, np.zeros((3,1)))
 
-        self.k1 = 30
-        self.k2 = 30
-        self.k3 = 30
+        self.k1 = 50
+        self.k2 = 50
+        self.k3 = 10
 
         self.integrals = 0.0
 
-    def calc(self, p, p_des, p_des_dot, tau_x, q, q_des, q_des_dot, tau_y, acc_z, acc_z_des, f_z):
-        self.integrals += (acc_z_des - acc_z) * self.ts
-        self.integrals = np.clip(self.integrals, -0.5, 0.5)
-        _, p_dot = self.p_lpf.calc_with_derivative(p)
-        _, q_dot = self.q_lpf.calc_with_derivative(q)
-        self.tau_x = self.tau_x_lpf.calc(tau_x)+self.Ix*(-p_dot+p_des_dot+self.k1*(p_des-p))
-        self.tau_y = self.tau_y_lpf.calc(tau_y)+self.Iy*(-q_dot+q_des_dot+self.k2*(q_des-q))
-        self.f_z = self.f_z_lpf.calc(f_z)+self.m*(-self.acc_z_lpf.calc(acc_z)+self.acc_z_des_lpf.calc(acc_z_des)
-                                                  +self.k3*self.integrals)
-        return self.tau_x, self.tau_y, self.f_z
+    def calc(self, p, p_des, p_des_dot, q, q_des, q_des_dot, f_z, f_z_des, u):
+        p, p_dot = self.p_lpf.calc_with_derivative(p)
+        q, q_dot = self.q_lpf.calc_with_derivative(q)
+        f_z = self.f_z_lpf.calc(f_z)
+
+        self.integrals += (f_z_des - f_z) * self.ts
+        # self.integrals = np.clip(self.integrals, -0.5, 0.5)
+        v_in = np.array([[p_des_dot+self.k1*(p_des-p)],[q_des_dot+self.k2*(q_des-q)],[f_z_des+self.k3*self.integrals]])
+        y_f_dot = np.array([[p_dot],[q_dot],[f_z]])
+        u_f = self.u_lpf.calc(u)
+        u = np.linalg.inv(self.G)@(v_in-y_f_dot)+u_f
+        return u
 
 
 if __name__ == "__main__":
@@ -140,9 +144,9 @@ if __name__ == "__main__":
     model = UAVModel(ts)
     pos_controller = PositionController(ts)
     pat_controller = PrimaryAxisAttitudeController(ts)
-    indi_controller = INDIController(ts)
+    indi_controller = INDIController(ts, model.AllocationMatrix_failed)
 
-    pos_target = np.array([[0.1],[0],[3]])
+    pos_target = np.array([[0],[0],[3]])
     tau_x = 0
     tau_y = 0
     f_z = 0
@@ -156,49 +160,46 @@ if __name__ == "__main__":
     show_list2 = []
     show_list3 = []
     R_list = []
-    for i in range(1000):
+    for i in range(100):
         if i==87:
             print(1)
         print("****** ",i," ******")
+
         state_list.append(model.state.copy())
         obs, R, acc_B = model.get_obs()
+        f_z = acc_B[2,0]
         obs_list.append(obs.copy())
-        acc_list.append(acc_B[2,0])
+        acc_list.append(f_z)
         R_list.append(R.copy())
         pos_real = obs[:3].reshape(-1,1)
         vel_real = obs[3:6].reshape(-1,1)
+        u = model.state[-4:].reshape(-1,1)
+
         acc_I_des, n_des_I, n_des_I_dot = pos_controller.calc(pos_target, pos_real, vel_real)
         print("acc_I_des: ", acc_I_des)
         print("n_des_I: ", n_des_I)
         print("n_des_I_dot: ", n_des_I_dot)
         acc_I_des_list.append(acc_I_des)
 
-        p_des, q_des, acc_z_des, p_des_dot, q_des_dot = pat_controller.calc(R, obs[12], acc_I_des, n_des_I, n_des_I_dot)
+        p_des, q_des, f_z_des, p_des_dot, q_des_dot = pat_controller.calc(R, obs[12], acc_I_des, n_des_I, n_des_I_dot)
         print("p_des: ", p_des)
         print("q_des: ", q_des)
-        print("acc_z_des: ", acc_z_des)
+        print("f_z_des: ", f_z_des)
         print("p_des_dot: ", p_des_dot)
         print("q_des_dot: ", q_des_dot)
-        show_list2.append([p_des, q_des, acc_z_des, p_des_dot, q_des_dot])
+        show_list2.append([p_des, q_des, f_z_des, p_des_dot, q_des_dot])
         
-        tau_x, tau_y, f_z = indi_controller.calc(obs[10], p_des, p_des_dot, tau_x, 
-                                                 obs[11], q_des, q_des_dot, tau_y, 
-                                                 acc_B[2,0], acc_z_des, f_z)
-        print("tau_x: ", tau_x)
-        print("tau_y: ", tau_y)
-        print("f_z: ", f_z)
-        show_list3.append([tau_x, tau_y, f_z])
+        u_target = indi_controller.calc(obs[10], p_des, p_des_dot, 
+                                                 obs[11], q_des, q_des_dot, 
+                                                 f_z, f_z_des, u[:3,:])
+        print("u_target: ", u_target)
+        show_list3.append([u_target[0], u_target[1], u_target[2]])
         
         n_des_B_list.append(pat_controller.n_des_B)
 
-        temp = np.linalg.inv(model.AllocationMatrix_failed)@np.array([[tau_x],[tau_y],[f_z]])
-        action = np.array([temp[0,0], temp[1,0], temp[2,0], 0])
+        action = np.array([u_target[0,0], u_target[1,0], u_target[2,0], 0])
 
         model.step(action)
-        temp = model.AllocationMatrix@model.action.reshape(-1,1)
-        tau_x = temp[0,0]
-        tau_y = temp[1,0]
-        f_z = temp[3,0]
 
     t = np.linspace(0,ts*len(obs_list),len(obs_list))
 
