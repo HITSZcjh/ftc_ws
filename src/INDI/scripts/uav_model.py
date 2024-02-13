@@ -62,8 +62,8 @@ class UAVModel(object):
                                q[0]*w[1]-q[1]*w[2]+q[3]*w[0],
                                q[0]*w[2]+q[1]*w[1]-q[2]*w[0])
         # 空气阻力和空气阻力矩
-        f_drag = -0.3*v
-        tau_drag = -0.005*w
+        f_drag = -0.0*v
+        tau_drag = -1e-4*np.sign(w)*w**2
         # 系统动力学
         # 添加噪声与失效系数
         noise = ca.SX.sym("noise", state.size()[0], 1)
@@ -147,7 +147,7 @@ class UAVModel(object):
         R = np.array(self.R(self.state))
         state_dot = np.array(self.state_dot(self.state, self.action, self.state_noise, self.k))
         acc_I = state_dot[3:6].reshape(-1, 1) + np.array([0, 0, 9.81]).reshape(-1, 1)
-        acc_B = R @ acc_I
+        acc_B = R.T @ acc_I
         # acc_B 为模拟加速度计测量值
         return obs, R, acc_B
 

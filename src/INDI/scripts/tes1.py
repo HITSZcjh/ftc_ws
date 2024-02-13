@@ -1,12 +1,10 @@
 from uav_model import UAVModel
-import os
+
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.spatial.transform import Rotation
-from matplotlib.animation import FuncAnimation, FFMpegWriter
+from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d import Axes3D
-
-
 
 BW = 50
 
@@ -46,9 +44,7 @@ class PositionController(object):
 
         self.g = np.array([[0],[0],[-9.81]])
         self.n_des_I = np.zeros((3,1))
-        self.n_des_I_dot = np.zeros((3,1))
 
-        self.n_des_I_lpf = LPF(self.ts, BW, self.n_des_I)
 
     def calc(self, pos_target, pos_real, vel_real):
         pos_err = pos_target - pos_real
@@ -67,86 +63,22 @@ class PositionController(object):
         
         # self.acc_I_des[2,0] = np.clip(self.acc_I_des[2,0], -9.81, 9.81)
         self.n_des_I = (self.acc_I_des-self.g)/np.linalg.norm(self.acc_I_des-self.g)
-        self.n_des_I, self.n_des_I_dot = self.n_des_I_lpf.calc_with_derivative(self.n_des_I)
-        return self.acc_I_des, self.n_des_I, self.n_des_I_dot
+
+        return self.n_des_I
     
-class PrimaryAxisAttitudeController(object):
+class PseudoINDI(object):
     def __init__(self, ts) -> None:
-        self.ts = ts
-        self.g = np.array([[0],[0],[-9.81]])
+        self.n_des_I_lpf = LPF(ts, BW, np.zeros((3,1)))
 
-        self.n_B = np.array([[0.2],[0.2],[0.92]])
-        self.kx = 5
-        self.ky = 5
-
-        self.p_des_lpf = LPF(self.ts, BW, 0.0)
-        self.q_des_lpf = LPF(self.ts, BW, 0.0)
-        self.f_z_des_lpf = LPF(self.ts, BW, 0.0)
-        self.n_des_B = None
-    def calc(self, R, r, acc_I_des, n_des_I, n_des_I_dot):
-        self.n_des_B = R.T@n_des_I
-        h1 = self.n_des_B[0,0]
-        h2 = self.n_des_B[1,0]
-        h3 = self.n_des_B[2,0]
-        n_B_x = self.n_B[0,0]
-        n_B_y = self.n_B[1,0]
-        n_B_z = self.n_B[2,0]
-        vout = np.array([[self.kx*(n_B_x-h1)],[self.ky*(n_B_y-h2)]])
-        temp = np.array([[0,1/h3],[-1/h3,0]])
-        n_des_I_hat_dot = (R.T@n_des_I_dot)[:2,0]
-        temp1 = temp@(vout-r*np.array([[h2],[-h1]])-n_des_I_hat_dot)
-        p_des = temp1[0,0]
-        q_des = temp1[1,0]
-        p_des, p_des_dot = self.p_des_lpf.calc_with_derivative(p_des)
-        q_des, q_des_dot = self.q_des_lpf.calc_with_derivative(q_des)
-        # acc_z_des = (R@acc_I_des)[2,0]
-        f_z_des = np.linalg.norm(acc_I_des-self.g)/n_B_z
-        f_z_des = self.f_z_des_lpf.calc(f_z_des)
-        return p_des, q_des, f_z_des, p_des_dot, q_des_dot
-
-class INDIController(object):
-    def __init__(self, ts, AllocationMatrix_failed) -> None:
-        self.ts = ts
-
-        self.Ix = 0.007
-        self.Iy = 0.007
-        self.m = 0.716
-        self.G = np.diagflat([1/self.Ix,1/self.Iy,1/self.m])@AllocationMatrix_failed
-
-        self.tau_x = 0.0
-        self.tau_y = 0.0
-        self.f_z = 0.0
-
-        self.f_z_lpf = LPF(self.ts, BW, 0.0)
-        self.p_lpf = LPF(self.ts, BW, 0.0)
-        self.q_lpf = LPF(self.ts, BW, 0.0)
-        self.u_lpf = LPF(self.ts, BW, np.zeros((3,1)))
-
-        self.k1 = 30
-        self.k2 = 30
-        self.k3 = 10
-
-        self.integrals = 0.0
-
-    def calc(self, p, p_des, p_des_dot, q, q_des, q_des_dot, f_z, f_z_des, u):
-        p, p_dot = self.p_lpf.calc_with_derivative(p)
-        q, q_dot = self.q_lpf.calc_with_derivative(q)
-        f_z = self.f_z_lpf.calc(f_z)
-
-        self.integrals += (f_z_des - f_z) * self.ts
-        self.integrals = np.clip(self.integrals, -1.0, 1.0)
-        v_in = np.array([[p_des_dot+self.k1*(p_des-p)],[q_des_dot+self.k2*(q_des-q)],[f_z_des+self.k3*self.integrals]])
-        y_f_dot = np.array([[p_dot],[q_dot],[f_z]])
-        u_f = self.u_lpf.calc(u)
-        u = np.linalg.inv(self.G)@(v_in-y_f_dot)+u_f
-        return u
-
+    def calc(self, R, n_des_I):
+        n_des_I_f, n_des_I_dot = self.n_des_I_lpf.calc_with_derivative(n_des_I)
+        
 
 if __name__ == "__main__":
     ts = 0.002
     model = UAVModel(ts)
     pos_controller = PositionController(ts)
-    pat_controller = PrimaryAxisAttitudeController(ts)
+    pat_controller = PseudoINDI(ts)
     indi_controller = INDIController(ts, model.AllocationMatrix_failed)
 
     pos_target = np.array([[0],[0],[3]])
@@ -163,7 +95,7 @@ if __name__ == "__main__":
     show_list2 = []
     show_list3 = []
     R_list = []
-    for i in range(3000):
+    for i in range(1000):
         if i==87:
             print(1)
         print("****** ",i," ******")
@@ -274,10 +206,5 @@ if __name__ == "__main__":
                                 arrow_length * R_list[frame, 0, 2], arrow_length * R_list[frame, 1, 2], arrow_length * R_list[frame, 2, 2], 
                                 color='b', label='Z')
 
-    ani = FuncAnimation(fig6, update, frames=R_list.shape[0], interval=1, repeat=True)
-    # writer = FFMpegWriter(fps=500, metadata=dict(artist='Me'), bitrate=1800)
-    # path_prefix = os.path.dirname(os.path.realpath(__file__))+"/data/"
-    # if not (os.path.exists(path_prefix)):
-    #     os.makedirs(path_prefix)
-    # ani.save(path_prefix+"output.mp4", writer=writer)
+    ani = FuncAnimation(fig6, update, frames=R_list.shape[0], interval=5, repeat=True)
     plt.show()
