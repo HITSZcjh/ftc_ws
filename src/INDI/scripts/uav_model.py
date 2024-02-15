@@ -3,8 +3,8 @@ import casadi as ca
 import numpy as np
 import os
 import timeit
-class UAVModel(object):
-    def __init__(self, dt:float=0.01) -> None:
+class SimpleUAVModel(object):
+    def __init__(self, dt:float=0.01, delay_time:float=None) -> None:
         # 系统状态
         p = ca.SX.sym("p", 3, 1)
         v = ca.SX.sym("v", 3, 1)
@@ -22,9 +22,9 @@ class UAVModel(object):
         rotor_time_constant_up = 0.0125
         rotor_time_constant_down = 0.025
         Kf = 8.54858e-06  # rotot_motor_constant
-        km = 0.016  # rotor_moment_constant
+        rotor_drag_coeff = 0.016  # rotor_moment_constant
         body_length = 0.17
-        mass = 0.716
+        mass = 0.73
         g = 9.81
         inertia = np.array([[0.007, 0, 0], [0, 0.007, 0], [0, 0, 0.012]])
         R = ca.vertcat(
@@ -45,13 +45,12 @@ class UAVModel(object):
             ),
         )
         self.R = ca.Function("R", [state], [R])
-        l = body_length / np.sqrt(2)
-        self.AllocationMatrix = np.array([[l, l, -l, -l],
-                                     [-l, l, l, -l],
-                                     [km, -km, km, -km],
+        self.AllocationMatrix = np.array([[0, body_length, 0, -body_length],
+                                     [-body_length, 0, body_length, 0],
+                                     [rotor_drag_coeff, -rotor_drag_coeff, rotor_drag_coeff, -rotor_drag_coeff],
                                      [1, 1, 1, 1]])
-        self.AllocationMatrix_failed = np.array([[l, l, -l],
-                                     [-l, l, l],
+        self.AllocationMatrix_failed = np.array([[0, body_length, 0],
+                                     [-body_length, 0, body_length],
                                      [1, 1, 1]])
         temp = self.AllocationMatrix@f_real
         F = ca.vertcat(np.zeros([2, 1]), temp[3])
@@ -109,12 +108,29 @@ class UAVModel(object):
                                0,0,0,
                                1,0,0,0,
                                0,0,0,
-                               1.75,1.75,1.75,1.75])
+                               0,0,0,0])
         self.action = np.zeros(4)
         self.state_noise = np.ones(17)
         self.k = np.ones(4)
         self.obs_noise = np.ones(13)
         self.integrator.set("x", self.state)
+
+        self.delay_time = delay_time
+        if self.delay_time is not None:
+            num = int(delay_time/self.dt)
+            self.state_list = [self.state.copy() for _ in range(num)]
+            
+            obs = self.state[:13]
+            R = np.array(self.R(self.state))
+            state_dot = np.array(self.state_dot(self.state, self.action, self.state_noise, self.k))
+            acc_I = state_dot[3:6].reshape(-1, 1) + np.array([0, 0, 9.81]).reshape(-1, 1)
+            acc_B = R.T @ acc_I
+            f_real = self.state[-4:]
+
+            self.obs_list = [obs.copy() for _ in range(num)]
+            self.R_list = [R.copy() for _ in range(num)]
+            self.acc_B_list = [acc_B.copy() for _ in range(num)]
+            self.f_real_list = [f_real.copy() for _ in range(num)]
 
     def step(self, action:np.ndarray, state_noise:np.ndarray=None, k:np.ndarray=None, state:np.ndarray=None):
         if state_noise is not None:
@@ -135,8 +151,26 @@ class UAVModel(object):
         # self.state[10:13] = np.clip(self.state[10:13], -5, 5)
 
         self.state[6:10] = self.state[6:10]/np.linalg.norm(self.state[6:10])
-        return self.state
+
+        if self.delay_time is not None:
+            self.state_list.append(self.state.copy())
+            self.state_list.pop(0)
+            return self.state_list[0]
+        else:
+            return self.state
     
+    def predict(self, state, action_list, dt):
+        self.integrator.set("T", dt)
+        for action in action_list:
+            state = self.step(action, state=state)
+        obs = state[:13]
+        obs[6:10] = obs[6:10]/np.linalg.norm(obs[6:10])
+        R = np.array(self.R(state))
+        state_dot = np.array(self.state_dot(state, action_list[-1], self.state_noise, self.k))
+        acc_I = state_dot[3:6].reshape(-1, 1) + np.array([0, 0, 9.81]).reshape(-1, 1)
+        acc_B = R.T @ acc_I
+        f_real = state[-4:]
+        return obs, R, acc_B, f_real
 
     def get_obs(self, obs_noise:np.ndarray=None):
         if obs_noise is not None:
@@ -148,11 +182,24 @@ class UAVModel(object):
         state_dot = np.array(self.state_dot(self.state, self.action, self.state_noise, self.k))
         acc_I = state_dot[3:6].reshape(-1, 1) + np.array([0, 0, 9.81]).reshape(-1, 1)
         acc_B = R.T @ acc_I
+        f_real = self.state[-4:]
         # acc_B 为模拟加速度计测量值
-        return obs, R, acc_B
+
+        if self.delay_time is not None:
+            self.obs_list.append(obs.copy())
+            self.obs_list.pop(0)
+            self.R_list.append(R.copy())
+            self.R_list.pop(0)
+            self.acc_B_list.append(acc_B.copy())
+            self.acc_B_list.pop(0)
+            self.f_real_list.append(f_real.copy())
+            self.f_real_list.pop(0)
+            return self.obs_list[0], self.R_list[0], self.acc_B_list[0], self.f_real_list[0]
+        else:
+            return obs, R, acc_B, f_real
 
 if __name__ == "__main__":
-    model = UAVModel()
+    model = SimpleUAVModel()
     action = np.ones(4)
     time_now = timeit.default_timer()
     for i in range(1):
