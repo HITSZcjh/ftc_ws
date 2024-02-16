@@ -60,7 +60,7 @@
 #define UAV_NY0    21
 #define UAV_NY     21
 #define UAV_NYN    17
-#define UAV_N      40
+#define UAV_N      20
 #define UAV_NH     0
 #define UAV_NPHI   0
 #define UAV_NHN    0

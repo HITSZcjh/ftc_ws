@@ -8,7 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import rospy
 
 
-BW = 50
+BW = 20
 
 class LPF(object):
     def __init__(self, ts, cutoff_freq, data):
@@ -32,7 +32,7 @@ class PositionController(object):
     def __init__(self, ts) -> None:
         self.ts = ts
 
-        self.kp_pos = np.array([[3],[3],[5]])
+        self.kp_pos = np.array([[1],[1],[1]])
         self.kp_vel = np.array([[2],[2],[6]])
         self.ki_vel = np.array([[0],[0],[0]])
 
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     rospy.init_node("rotors_model")
     ts = 0.01
     rate = rospy.Rate(1/ts)
-    model = RotorsUAVModel(ts, delay_time=0.05)
+    model = RotorsUAVModel(ts, delay_time=0.07)
     pos_controller = PositionController(ts)
     pat_controller = PrimaryAxisAttitudeController(ts)
     indi_controller = INDIController(ts, model.AllocationMatrix_failed)
@@ -166,9 +166,12 @@ if __name__ == "__main__":
     f_target_list = []
     # i = 0
     # while not rospy.is_shutdown():
-    for i in range(1000):
+    for i in range(1500):
         # i += 1
         print("****** ",i," ******")
+
+        if i>750:
+            pat_controller.n_B = np.array([[0.1],[0.1],[0.98]])
 
         time_now = rospy.Time.now().to_sec()
         obs, R, acc_B, f_real = model.get_obs()

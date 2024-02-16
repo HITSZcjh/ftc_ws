@@ -352,7 +352,7 @@ void UAV_acados_create_5_set_nlp_in(UAV_solver_capsule* capsule, const int N, do
     if (new_time_steps) {
         UAV_acados_update_time_steps(capsule, N, new_time_steps);
     } else {// all time_steps are identical
-        double time_step = 0.04;
+        double time_step = 0.05;
         for (int i = 0; i < N; i++)
         {
             ocp_nlp_in_set(nlp_config, nlp_dims, nlp_in, i, "Ts", &time_step);
@@ -387,9 +387,9 @@ void UAV_acados_create_5_set_nlp_in(UAV_solver_capsule* capsule, const int N, do
     free(yref_e);
    double* W_0 = calloc(NY0*NY0, sizeof(double));
     // change only the non-zero elements:
-    W_0[0+(NY0) * 0] = 1.5;
-    W_0[1+(NY0) * 1] = 1.5;
-    W_0[2+(NY0) * 2] = 1.5;
+    W_0[0+(NY0) * 0] = 5;
+    W_0[1+(NY0) * 1] = 5;
+    W_0[2+(NY0) * 2] = 5;
     W_0[10+(NY0) * 10] = 1;
     W_0[11+(NY0) * 11] = 1;
     W_0[17+(NY0) * 17] = 0.01;
@@ -400,9 +400,9 @@ void UAV_acados_create_5_set_nlp_in(UAV_solver_capsule* capsule, const int N, do
     free(W_0);
     double* W = calloc(NY*NY, sizeof(double));
     // change only the non-zero elements:
-    W[0+(NY) * 0] = 1.5;
-    W[1+(NY) * 1] = 1.5;
-    W[2+(NY) * 2] = 1.5;
+    W[0+(NY) * 0] = 5;
+    W[1+(NY) * 1] = 5;
+    W[2+(NY) * 2] = 5;
     W[10+(NY) * 10] = 1;
     W[11+(NY) * 11] = 1;
     W[17+(NY) * 17] = 0.01;
@@ -417,9 +417,9 @@ void UAV_acados_create_5_set_nlp_in(UAV_solver_capsule* capsule, const int N, do
     free(W);
     double* W_e = calloc(NYN*NYN, sizeof(double));
     // change only the non-zero elements:
-    W_e[0+(NYN) * 0] = 1.5;
-    W_e[1+(NYN) * 1] = 1.5;
-    W_e[2+(NYN) * 2] = 1.5;
+    W_e[0+(NYN) * 0] = 5;
+    W_e[1+(NYN) * 1] = 5;
+    W_e[2+(NYN) * 2] = 5;
     W_e[10+(NYN) * 10] = 1;
     W_e[11+(NYN) * 11] = 1;
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "W", W_e);
@@ -632,7 +632,7 @@ void UAV_acados_create_5_set_nlp_in(UAV_solver_capsule* capsule, const int N, do
     ubx[2] = 6.00318901352;
     ubx[3] = 6.00318901352;
     ubx[4] = 6.00318901352;
-    ubx[5] = 0.1;
+    ubx[5] = 0.01;
 
     for (int i = 1; i < N; i++)
     {

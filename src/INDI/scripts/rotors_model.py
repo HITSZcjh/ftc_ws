@@ -30,7 +30,7 @@ class RotorsUAVModel(object):
         self.imu_msg = None
         self.motor_speed_msg = None
 
-        rospy.Subscriber("/hummingbird/ground_truth/odometry", Odometry, self.odometry_callback)
+        rospy.Subscriber("/hummingbird/odometry_sensor1/odometry", Odometry, self.odometry_callback)
         rospy.Subscriber("/hummingbird/ground_truth/imu", Imu, self.imu_callback)
         rospy.Subscriber("/hummingbird/motor_speed", Actuators, self.motor_speed_callback)
         

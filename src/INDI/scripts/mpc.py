@@ -101,7 +101,7 @@ class UAV_MPC(object):
 
         # set up RK4
         self.dt = dt
-        self.N = 40
+        self.N = 20
         ocp = AcadosOcp()
         ocp.model = model
         ocp.dims.N = self.N
@@ -110,7 +110,7 @@ class UAV_MPC(object):
         ocp.cost.cost_type = 'LINEAR_LS'
         ocp.cost.cost_type_e = 'LINEAR_LS'
         Q = np.zeros((self.nx, 1))
-        Q[0:3] = 1.5
+        Q[0:3] = 5
         Q[10:12] = 1
         Q = np.diagflat(Q)
         R = 1*0.01*np.eye(self.nu)
@@ -139,7 +139,7 @@ class UAV_MPC(object):
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
-                                        0.1])
+                                        0.01])
 
         ocp.constraints.idxbu = np.array([0, 1, 2, 3])
         ocp.constraints.lbu = np.array([-15*7, -15*7, -15*7, -15*7])
@@ -164,12 +164,12 @@ if __name__ == '__main__':
 
     rospy.init_node("UAV_MPC_node", anonymous=True)
     
-    ts = 0.04
-    model = RotorsUAVModel(ts)
-    controller = UAV_MPC(ts)
+    ts = 0.01
+    model = RotorsUAVModel(ts,delay_time=0.03)
+    controller = UAV_MPC(dt=0.05)
     controller.yref[0:3] = np.array([0, 0, 1])
     controller.yref_e[0:3] = np.array([0, 0, 1])
-    rate = rospy.Rate(1/0.01)
+    rate = rospy.Rate(1/ts)
     f_real_list = []
     f_target_list = []
     # while not rospy.is_shutdown():
@@ -185,15 +185,15 @@ if __name__ == '__main__':
         controller.x0 = np.hstack((obs, f_real))
         print(controller.x0)
         u = controller.solver.solve_for_x0(controller.x0)
-        x1 = controller.solver.get(1, 'x')
-        
-        model.step(x1[-4:])
+        # 此处3倍是考虑电机一阶模型，使得电机在ts时能够达到f_target
+        f_target = f_real+u*ts*3
+        model.step(f_target)
 
         rate.sleep()
         time_record = rospy.Time.now().to_sec() - time_now
         print("estimation time is {}".format(time_record))
         f_real_list.append(f_real.copy())
-        f_target_list.append(x1[-4:].copy())
+        f_target_list.append(f_target.copy())
 
     t = np.linspace(0, 0.01*len(f_real_list), len(f_real_list))
     fig7,axs7 = plt.subplots(4,1)

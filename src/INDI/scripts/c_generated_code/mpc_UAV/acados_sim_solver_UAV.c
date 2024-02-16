@@ -74,7 +74,7 @@ int UAV_acados_sim_create(UAV_sim_solver_capsule * capsule)
     bool tmp_bool;
 
     
-    double Tsim = 0.04;
+    double Tsim = 0.05;
 
     
     // explicit ode
