@@ -62,7 +62,7 @@ class SimpleUAVModel(object):
                                q[0]*w[2]+q[1]*w[1]-q[2]*w[0])
         # 空气阻力和空气阻力矩
         f_drag = -0.0*v
-        tau_drag = -1e-4*np.sign(w)*w**2
+        tau_drag = -1e-4*ca.sign(w)*w**2
         # 系统动力学
         # 添加噪声与失效系数
         noise = ca.SX.sym("noise", state.size()[0], 1)
@@ -85,6 +85,17 @@ class SimpleUAVModel(object):
         model.u = f_target
         model.p = ca.vertcat(noise, k)
         model.name = "UAVModel"
+
+        # 测试RK45积分和acados积分的一致性
+        ode = ca.Function('ode',[state, f_target, noise, k], [f_expl])
+        x = model.x
+        u = model.u
+        k1 = ode(x,       u, noise, k)
+        k2 = ode(x+dt/2*k1, u, noise, k)
+        k3 = ode(x+dt/2*k2, u, noise, k)
+        k4 = ode(x+dt*k3,  u, noise, k)
+        xf = x + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+        self.test_fun = ca.Function('test_fun', [state, f_target, noise, k],[xf])
 
         self.dt = dt
         sim = AcadosSim()
@@ -201,10 +212,10 @@ class SimpleUAVModel(object):
 if __name__ == "__main__":
     model = SimpleUAVModel()
     action = np.ones(4)
-    time_now = timeit.default_timer()
-    for i in range(1):
-        model.step(model.state, action)
+    model.step(action)
     print(model.state)
-    print(np.array(model.state_dot(model.state,action,model.noise,model.k)))
-    end = timeit.default_timer()
-    print(end-time_now)
+    # print(model1.state)
+    # model12 = SimpleUAVModel(0.00005)
+    # for i in range(200):
+    #     model12.state = model12.test_fun(model12.state, action, model12.state_noise, model12.k)
+    # print(model12.state)

@@ -1,0 +1,160 @@
+#include "INDI/uav_simulator.hpp"
+#include <iostream>
+namespace QuadrotorEnv
+{
+    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), noise(p_data, NX), k(p_data + NX, NK), obs_map(x_data, Nobs)
+    {
+
+        world_box << -10, 10, -10, 10, 0, 4;
+        goal_state << 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+        pos_coeff = cfg["rl"]["pos_coeff"].as<double>();
+        lin_vel_coeff = cfg["rl"]["lin_vel_coeff"].as<double>();
+        ang_vel_coeff = cfg["rl"]["ang_vel_coeff"].as<double>();
+        max_ep_len = cfg["rl"]["max_ep_len"].as<int>();
+
+        capsule = UAVModel_acados_sim_solver_create_capsule();
+        status = UAVModel_acados_sim_create(capsule);
+        if (status)
+        {
+            printf("UAVModel_acados_sim_create() returned status %d. Exiting.\n", status);
+            exit(1);
+        }
+        config = UAVModel_acados_get_sim_config(capsule);
+        in = UAVModel_acados_get_sim_in(capsule);
+        out = UAVModel_acados_get_sim_out(capsule);
+        dims = UAVModel_acados_get_sim_dims(capsule);
+
+        // initial
+        cnt = 0;
+        x.setZero();
+        x(2) = 2;
+        x(6) = 1;
+        u.setZero();
+        noise.setOnes();
+        k.setOnes();
+
+        sim_in_set(config, dims, in, "x", x_data);
+        sim_in_set(config, dims, in, "T", &ts);
+        UAVModel_acados_sim_update_params(capsule, p_data, NP);
+    }
+
+    void Simulator::step(int agent_id, Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> actions,
+                         Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> obs,
+                         Eigen::Ref<Eigen::Matrix<double, -1, 1>> rewards,
+                         Eigen::Ref<Eigen::Matrix<bool, -1, 1>> dones)
+    {
+        u = actions.row(agent_id);
+        // set boundary
+        u = u.cwiseMax(u_range[0]).cwiseMin(u_range[1]);
+        // UAVModel_acados_sim_update_params(capsule, p_data, NP);
+        sim_in_set(config, dims, in, "x", x_data);
+        sim_in_set(config, dims, in, "u", u_data);
+        status = UAVModel_acados_sim_solve(capsule);
+        if (status != ACADOS_SUCCESS)
+        {
+            printf("UAVModel_acados_sim_solve() returned status %d. Exiting.\n", status);
+            exit(1);
+        }
+        sim_out_get(config, dims, out, "x", x_data);
+        // x1.segment(3,3) = x1.segment(3,3).cwiseMax(velocity_range[0]).cwiseMin(velocity_range[1]);
+        // x1.segment(10,3) = x1.segment(10,3).cwiseMax(omega_range[0]).cwiseMin(omega_range[1]);
+        x.segment(6, 4) = x.segment(6, 4) / x.segment(6, 4).norm();
+
+        get_reward(rewards(agent_id));
+        get_done(dones(agent_id));
+        cnt ++;
+
+        if(dones(agent_id))
+            reset();
+        get_obs(obs.row(agent_id));
+    }
+
+    void Simulator::reset()
+    {
+        cnt = 0;
+
+        x.setZero();
+
+        x(0) = uniform_dist_(random_gen_);
+        x(1) = uniform_dist_(random_gen_);
+        x(2) = uniform_dist_(random_gen_)+2;
+
+        x(3) = uniform_dist_(random_gen_);
+        x(4) = uniform_dist_(random_gen_);
+        x(5) = uniform_dist_(random_gen_);
+
+        x(6) = uniform_dist_(random_gen_);
+        x(7) = uniform_dist_(random_gen_);
+        x(8) = uniform_dist_(random_gen_);
+        x(9) = uniform_dist_(random_gen_);
+        x.segment(6, 4) = x.segment(6, 4) / x.segment(6, 4).norm();
+
+        x(10) = uniform_dist_(random_gen_);
+        x(11) = uniform_dist_(random_gen_);
+        x(12) = uniform_dist_(random_gen_);
+
+        x(13) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
+        x(14) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
+        x(15) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
+        x(16) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
+
+    }
+
+    void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)
+    {
+        obs = obs_map;
+    }
+
+    void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs, Eigen::Matrix<double, Nobs, 1> &noise)
+    {
+        obs = obs_map + noise;
+        obs.segment(6, 4) = obs.segment(6, 4) / obs.segment(6, 4).norm();
+    }
+
+    void Simulator::get_reward(double &reward)
+    {
+        double pos_reward = pos_coeff * (x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm();
+        double lin_vel_reward = lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
+        double ang_vel_reward = ang_vel_coeff * (x.segment(10, 3)).squaredNorm();
+        reward = pos_reward + lin_vel_reward + ang_vel_reward + 0.1;
+        if(cnt == max_ep_len)
+            reward += 10;
+    }
+
+    void Simulator::get_done(bool &done)
+    {
+        if(x(0)<world_box(0,0)||x(0)>world_box(0,1)||x(1)<world_box(1,0)||x(1)>world_box(1,1)||x(2)<world_box(2,0)||x(2)>world_box(2,1)||cnt == max_ep_len)
+        {
+            done = true;
+        }
+        else
+            done = false;
+    }
+
+    void Simulator::test()
+    {
+        u.setOnes();
+        sim_in_set(config, dims, in, "x", x_data);
+        sim_in_set(config, dims, in, "u", u_data);
+        status = UAVModel_acados_sim_solve(capsule);
+        if (status != ACADOS_SUCCESS)
+        {
+            printf("UAVModel_acados_sim_solve() returned status %d. Exiting.\n", status);
+            exit(1);
+        }
+        sim_out_get(config, dims, out, "x", x_data);
+        std::cout << x.transpose() << std::endl;
+    }
+
+    Simulator::~Simulator()
+    {
+        status = UAVModel_acados_sim_free(capsule);
+        if (status)
+        {
+            printf("UAVModel_acados_sim_free() returned status %d. \n", status);
+        }
+
+        UAVModel_acados_sim_solver_free_capsule(capsule);
+    }
+}
