@@ -38,8 +38,7 @@ class MLPPolicy(nn.Module):
 
         state = ptu.from_numpy(state)
         distr = self.forward(state)
-        act = torch.tanh(distr.sample())
-        act = (act+1)/2
+        act = distr.sample()
         return ptu.to_numpy(act)
 
     def forward(self, state: torch.FloatTensor):

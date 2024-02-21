@@ -6,11 +6,13 @@ namespace QuadrotorEnv
     {
 
         world_box << -10, 10, -10, 10, 0, 4;
-        goal_state << 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        goal_state << 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
         pos_coeff = cfg["rl"]["pos_coeff"].as<double>();
+        ori_coeff = cfg["rl"]["ori_coeff"].as<double>();
         lin_vel_coeff = cfg["rl"]["lin_vel_coeff"].as<double>();
         ang_vel_coeff = cfg["rl"]["ang_vel_coeff"].as<double>();
+        act_coeff = cfg["rl"]["act_coeff"].as<double>();
         max_ep_len = cfg["rl"]["max_ep_len"].as<int>();
 
         capsule = UAVModel_acados_sim_solver_create_capsule();
@@ -116,8 +118,10 @@ namespace QuadrotorEnv
     {
         double pos_reward = pos_coeff * (x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm();
         double lin_vel_reward = lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
+        double ori_reward = ori_coeff * (x.segment(6, 4) - goal_state.segment(6, 4)).squaredNorm();
         double ang_vel_reward = ang_vel_coeff * (x.segment(10, 3)).squaredNorm();
-        reward = pos_reward + lin_vel_reward + ang_vel_reward + 0.1;
+        double act_reward = act_coeff * u.squaredNorm();
+        reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward + 0.1;
         if(cnt == max_ep_len)
             reward += 10;
     }

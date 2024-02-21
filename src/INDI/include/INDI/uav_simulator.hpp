@@ -63,8 +63,10 @@ namespace QuadrotorEnv
         Eigen::Matrix<double, 3, 2> world_box;
         Eigen::Matrix<double, NX, 1> goal_state;
         double pos_coeff;
+        double ori_coeff;
         double lin_vel_coeff;
         double ang_vel_coeff;
+        double act_coeff;
         int max_ep_len;
         int cnt;
     };

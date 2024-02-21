@@ -22,6 +22,7 @@ from matplotlib import pyplot as plt
 import sys
 
 from rotors_model import RotorsUAVModel
+from uav_model import SimpleUAVModel
 # python强制打印整个数组
 np.set_printoptions(threshold=sys.maxsize, precision=4, suppress=True)
 

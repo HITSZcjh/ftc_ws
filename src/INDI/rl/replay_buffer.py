@@ -17,8 +17,9 @@ class ReplayBuffer(object):
     def add_rollouts(self, paths, noised=False):
 
         # add new rollouts into our list of rollouts
-        for path in paths:
-            self.paths.append(path)
+
+        # for path in paths:
+        #     self.paths.append(path)
 
         # convert new rollouts into their component arrays, and append them onto our arrays
         states, actions, next_states, dones, concatenated_rewards, unconcatenated_rewards = convert_listofrollouts(paths)
@@ -50,7 +51,7 @@ class ReplayBuffer(object):
                 self.unconcatenated_rewards += unconcatenated_rewards  # TODO keep only latest max_size around
             else:
                 self.unconcatenated_rewards.append(unconcatenated_rewards)  # TODO keep only latest max_size around
-
+            self.unconcatenated_rewards = self.unconcatenated_rewards[-self.max_size:]
     ########################################
     ########################################
 

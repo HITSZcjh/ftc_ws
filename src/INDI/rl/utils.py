@@ -72,12 +72,23 @@ def sample_steps(env, policy, steps):
         rewards_list.append(rewards[:last_true_index+1,i])
         next_states_list.append(next_states[:last_true_index+1,i])
         dones_list.append(dones[:last_true_index+1,i])
+    
+    states_list = np.concatenate(states_list)
+    actions_list = np.concatenate(actions_list)
+    rewards_list = np.concatenate(rewards_list)
+    next_states_list = np.concatenate(next_states_list)
+    dones_list = np.concatenate(dones_list)
 
-    return {"states":np.concatenate(states_list), 
-            "actions":np.concatenate(actions_list), 
-            "rewards":np.concatenate(rewards_list), 
-            "next_states":np.concatenate(next_states_list), 
-            "dones":np.concatenate(dones_list)}
+    batch = states_list.shape[0]
+    index = np.where(dones_list == True)[0]
+    index = np.insert(index, 0, 0)
+    paths = [{"states":states_list[index[i]:index[i+1]+1],
+              "actions":actions_list[index[i]:index[i+1]+1],
+              "rewards":rewards_list[index[i]:index[i+1]+1],
+              "next_states":next_states_list[index[i]:index[i+1]+1],
+              "dones":dones_list[index[i]:index[i+1]+1]} for i in range(index.shape[0]-1)]
+
+    return paths, batch
 
 def sample_trajectories(env, policy, min_timesteps_per_batch):
     """
@@ -91,9 +102,9 @@ def sample_trajectories(env, policy, min_timesteps_per_batch):
     timesteps_this_batch = 0
     paths = []
     while timesteps_this_batch < min_timesteps_per_batch:
-        path = sample_steps(env, policy, num)
-        timesteps_this_batch += path["rewards"].shape[0]
-        paths.append(path)
+        path, batch = sample_steps(env, policy, num)
+        timesteps_this_batch += batch
+        paths += path
     return paths
 
 def sample_n_trajectories(env, policy, ntraj):

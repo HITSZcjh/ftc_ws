@@ -16,12 +16,12 @@ class PPO:
     def __init__(self, logdir, save_actor_model_path, save_critic_model_path) -> None:
         ptu.init_gpu(use_gpu=True)
         self.env = RLModel()
-        self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, 1e-3)
-        self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 1e-3, 0.99)
-        self.batchsize = 200000
+        self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3)
+        self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 1e-4, 0.99)
+        self.batchsize = 250000
         self.eval_bathsize = 100000
         self.replay_buffer = ReplayBuffer()
-        self.epochs = 10
+        self.epochs = 50
         self.eps = 0.2
         self.n_iter = 1000
         self.logger = Logger(logdir)
@@ -53,8 +53,8 @@ class PPO:
     def perform_logging(self, itr, train_paths, eval_paths):
         train_returns = [train_path["rewards"].sum() for train_path in train_paths]
         train_ep_lens = [len(train_path["rewards"]) for train_path in train_paths]
-        eval_returns = [eval_path["rewards"].sum() for eval_path in eval_paths]
-        eval_ep_lens = [len(eval_path["rewards"]) for eval_path in eval_paths]
+        # eval_returns = [eval_path["rewards"].sum() for eval_path in eval_paths]
+        # eval_ep_lens = [len(eval_path["rewards"]) for eval_path in eval_paths]
 
         logs = OrderedDict()
         logs["Train_AverageReturn"] = np.mean(train_returns)
@@ -64,13 +64,13 @@ class PPO:
         logs["Train_MinEpLen"] = np.min(train_ep_lens)
         logs["Train_MaxEpLen"] = np.max(train_ep_lens)
         logs["Train_AverageEpLen"] = np.mean(train_ep_lens)
-        logs["Eval_AverageReturn"] = np.mean(eval_returns)
-        logs["Eval_StdReturn"] = np.std(eval_returns)
-        logs["Eval_MaxReturn"] = np.max(eval_returns)
-        logs["Eval_MinReturn"] = np.min(eval_returns)
-        logs["Eval_MinEpLen"] = np.min(eval_ep_lens)
-        logs["Eval_MaxEpLen"] = np.max(eval_ep_lens)
-        logs["Eval_AverageEpLen"] = np.mean(eval_ep_lens)
+        # logs["Eval_AverageReturn"] = np.mean(eval_returns)
+        # logs["Eval_StdReturn"] = np.std(eval_returns)
+        # logs["Eval_MaxReturn"] = np.max(eval_returns)
+        # logs["Eval_MinReturn"] = np.min(eval_returns)
+        # logs["Eval_MinEpLen"] = np.min(eval_ep_lens)
+        # logs["Eval_MaxEpLen"] = np.max(eval_ep_lens)
+        # logs["Eval_AverageEpLen"] = np.mean(eval_ep_lens)
         logs["TimeSinceStart"] = time.time() - self.start_time
         # perform the logging
         for key, value in logs.items():
@@ -88,17 +88,20 @@ class PPO:
             states, actions, rewards, next_states, dones = self.replay_buffer.sample_recent_data(self.batchsize)
 
             print("Training model...\n")
+            
+            print(path[0]["states"])
+            print(path[0]["actions"])
             self.critic.update(states, next_states, rewards, dones)
             self.actor_update(states, actions, rewards, dones)
 
-            print("collecting eval data...\n")
-            eval_paths = sample_trajectories(self.env, self.actor, self.eval_bathsize)
+            # print("collecting eval data...\n")
+            # eval_paths = sample_trajectories(self.env, self.actor, self.eval_bathsize)
             print("Perform the logging...\n")
-            self.perform_logging(itr, path, eval_paths)
+            self.perform_logging(itr, path, path)
 
             if(itr%10 == 0):
                 print("Saving model...\n")
-                print(eval_paths[0]["rewards"])
+                # print(eval_paths[0]["rewards"])
                 self.actor.save(self.save_actor_model_path+'/%d.pt' %itr)
                 self.critic.save(self.save_critic_model_path+'/%d.pt' %itr)
     

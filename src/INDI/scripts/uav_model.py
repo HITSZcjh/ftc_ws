@@ -4,7 +4,7 @@ import numpy as np
 import os
 import timeit
 class SimpleUAVModel(object):
-    def __init__(self, dt:float=0.01, delay_time:float=None) -> None:
+    def __init__(self, ts:float=0.01, delay_time:float=None, log:bool=False) -> None:
         # 系统状态
         p = ca.SX.sym("p", 3, 1)
         v = ca.SX.sym("v", 3, 1)
@@ -91,17 +91,17 @@ class SimpleUAVModel(object):
         x = model.x
         u = model.u
         k1 = ode(x,       u, noise, k)
-        k2 = ode(x+dt/2*k1, u, noise, k)
-        k3 = ode(x+dt/2*k2, u, noise, k)
-        k4 = ode(x+dt*k3,  u, noise, k)
-        xf = x + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+        k2 = ode(x+ts/2*k1, u, noise, k)
+        k3 = ode(x+ts/2*k2, u, noise, k)
+        k4 = ode(x+ts*k3,  u, noise, k)
+        xf = x + ts/6 * (k1 + 2*k2 + 2*k3 + k4)
         self.test_fun = ca.Function('test_fun', [state, f_target, noise, k],[xf])
 
-        self.dt = dt
+        self.ts = ts
         sim = AcadosSim()
         sim.model = model
         sim.parameter_values = np.ones([model.p.size()[0], 1])
-        sim.solver_options.T = self.dt
+        sim.solver_options.T = self.ts
         sim.solver_options.integrator_type = "ERK"
         sim.solver_options.num_stages = 3
         sim.solver_options.num_steps = 3
@@ -115,7 +115,7 @@ class SimpleUAVModel(object):
         self.integrator = AcadosSimSolver(sim, json_file=json_file)
 
         self.action_range = [0.0, 6.0]
-        self.state = np.array([0,0,3,
+        self.state = np.array([0,0,1,
                                0,0,0,
                                1,0,0,0,
                                0,0,0,
@@ -128,8 +128,8 @@ class SimpleUAVModel(object):
 
         self.delay_time = delay_time
         if self.delay_time is not None:
-            num = int(delay_time/self.dt)
-            self.state_list = [self.state.copy() for _ in range(num)]
+            num = int(delay_time/self.ts)
+            self.delay_state_list = [self.state.copy() for _ in range(num)]
             
             obs = self.state[:13]
             R = np.array(self.R(self.state))
@@ -138,10 +138,15 @@ class SimpleUAVModel(object):
             acc_B = R.T @ acc_I
             f_real = self.state[-4:]
 
-            self.obs_list = [obs.copy() for _ in range(num)]
-            self.R_list = [R.copy() for _ in range(num)]
-            self.acc_B_list = [acc_B.copy() for _ in range(num)]
-            self.f_real_list = [f_real.copy() for _ in range(num)]
+            self.delay_obs_list = [obs.copy() for _ in range(num)]
+            self.delay_R_list = [R.copy() for _ in range(num)]
+            self.delay_acc_B_list = [acc_B.copy() for _ in range(num)]
+            self.delay_f_real_list = [f_real.copy() for _ in range(num)]
+
+        self.log = log
+        if self.log:
+            self.log_state_list = []
+            self.log_action_list = []
 
     def step(self, action:np.ndarray, state_noise:np.ndarray=None, k:np.ndarray=None, state:np.ndarray=None):
         if state_noise is not None:
@@ -152,6 +157,11 @@ class SimpleUAVModel(object):
             self.state = state
 
         self.action = np.clip(action, self.action_range[0], self.action_range[1]) 
+
+        if self.log:
+            self.log_state_list.append(self.state.copy())
+            self.log_action_list.append(self.action.copy())
+
         self.integrator.set("x", self.state)
         self.integrator.set("u", self.action)
         self.integrator.set("p", np.concatenate([self.state_noise, self.k]))
@@ -164,14 +174,14 @@ class SimpleUAVModel(object):
         self.state[6:10] = self.state[6:10]/np.linalg.norm(self.state[6:10])
 
         if self.delay_time is not None:
-            self.state_list.append(self.state.copy())
-            self.state_list.pop(0)
-            return self.state_list[0]
+            self.delay_state_list.append(self.state.copy())
+            self.delay_state_list.pop(0)
+            return self.delay_state_list[0]
         else:
             return self.state
     
-    def predict(self, state, action_list, dt):
-        self.integrator.set("T", dt)
+    def predict(self, state, action_list, ts):
+        self.integrator.set("T", ts)
         for action in action_list:
             state = self.step(action, state=state)
         obs = state[:13]
@@ -197,17 +207,106 @@ class SimpleUAVModel(object):
         # acc_B 为模拟加速度计测量值
 
         if self.delay_time is not None:
-            self.obs_list.append(obs.copy())
-            self.obs_list.pop(0)
-            self.R_list.append(R.copy())
-            self.R_list.pop(0)
-            self.acc_B_list.append(acc_B.copy())
-            self.acc_B_list.pop(0)
-            self.f_real_list.append(f_real.copy())
-            self.f_real_list.pop(0)
-            return self.obs_list[0], self.R_list[0], self.acc_B_list[0], self.f_real_list[0]
+            self.delay_obs_list.append(obs.copy())
+            self.delay_obs_list.pop(0)
+            self.delay_R_list.append(R.copy())
+            self.delay_R_list.pop(0)
+            self.delay_acc_B_list.append(acc_B.copy())
+            self.delay_acc_B_list.pop(0)
+            self.delay_f_real_list.append(f_real.copy())
+            self.delay_f_real_list.pop(0)
+            return self.delay_obs_list[0], self.delay_R_list[0], self.delay_acc_B_list[0], self.delay_f_real_list[0]
         else:
             return obs, R, acc_B, f_real
+
+    def update(self, frame):
+        # global self.x_arrow, self.y_arrow, self.z_arrow, ax6
+        # 旋转坐标轴
+        self.x_arrow.remove()
+        self.y_arrow.remove()
+        self.z_arrow.remove()
+        
+        self.x_arrow = self.axs.quiver(self.log_state_list[frame,0],self.log_state_list[frame,1],self.log_state_list[frame,2],
+                            self.arrow_length * self.log_R_list[frame, 0, 0], self.arrow_length * self.log_R_list[frame, 1, 0], self.arrow_length * self.log_R_list[frame, 2, 0], 
+                            color='r', label='X')
+        self.y_arrow = self.axs.quiver(self.log_state_list[frame,0],self.log_state_list[frame,1],self.log_state_list[frame,2],
+                                self.arrow_length * self.log_R_list[frame, 0, 1], self.arrow_length * self.log_R_list[frame, 1, 1], self.arrow_length * self.log_R_list[frame, 2, 1],
+                                color='g', label='Y')
+        self.z_arrow = self.axs.quiver(self.log_state_list[frame,0],self.log_state_list[frame,1],self.log_state_list[frame,2],
+                                self.arrow_length * self.log_R_list[frame, 0, 2], self.arrow_length * self.log_R_list[frame, 1, 2], self.arrow_length * self.log_R_list[frame, 2, 2], 
+                                color='b', label='Z')
+
+    def log_show(self):
+        if self.log:
+            import matplotlib.pyplot as plt
+            from matplotlib.animation import FuncAnimation, FFMpegWriter
+            t = np.arange(0, len(self.log_state_list)*self.ts, self.ts)
+            self.log_state_list = np.array(self.log_state_list)
+            self.log_action_list = np.array(self.log_action_list)
+
+            self.fig, self.axs = plt.subplots(2, 2)
+            self.axs[0,0].plot(t, self.log_state_list[:, 0], label="px")
+            self.axs[0,0].plot(t, self.log_state_list[:, 1], label="py")
+            self.axs[0,0].plot(t, self.log_state_list[:, 2], label="pz")
+            self.axs[0,0].legend()
+            self.axs[0,1].plot(t, self.log_state_list[:, 3], label="vx")
+            self.axs[0,1].plot(t, self.log_state_list[:, 4], label="vy")
+            self.axs[0,1].plot(t, self.log_state_list[:, 5], label="vz")
+            self.axs[0,1].legend()
+            self.axs[1,0].plot(t, self.log_state_list[:, 6], label="w")
+            self.axs[1,0].plot(t, self.log_state_list[:, 7], label="x")
+            self.axs[1,0].plot(t, self.log_state_list[:, 8], label="y")
+            self.axs[1,0].plot(t, self.log_state_list[:, 9], label="z")
+            self.axs[1,0].legend()
+            self.axs[1,1].plot(t, self.log_state_list[:, 10], label="wx")
+            self.axs[1,1].plot(t, self.log_state_list[:, 11], label="wy")
+            self.axs[1,1].plot(t, self.log_state_list[:, 12], label="wz")
+            self.axs[1,1].legend()
+
+
+            self.fig, self.axs = plt.subplots(2,2)
+            self.axs[0,0].plot(t, self.log_action_list[:, 0], label="f1_target")
+            self.axs[0,0].plot(t, self.log_state_list[:,13], label="f1_real")
+            self.axs[0,0].legend()
+            self.axs[0,1].plot(t, self.log_action_list[:, 1], label="f2_target")
+            self.axs[0,1].plot(t, self.log_state_list[:,14], label="f2_real")
+            self.axs[0,1].legend()
+            self.axs[1,0].plot(t, self.log_action_list[:, 2], label="f3_target")
+            self.axs[1,0].plot(t, self.log_state_list[:,15], label="f3_real")
+            self.axs[1,0].legend()
+            self.axs[1,1].plot(t, self.log_action_list[:, 3], label="f4_target")
+            self.axs[1,1].plot(t, self.log_state_list[:,16], label="f4_real")
+            self.axs[1,1].legend()
+
+
+            self.fig = plt.figure()
+            self.axs = self.fig.add_subplot(111, projection='3d')
+            self.axs.set_xlim(-5,5)
+            self.axs.set_ylim(-5,5)
+            self.axs.set_zlim(0,4)
+            self.arrow_length = 0.5
+            self.log_R_list = []
+            for i in range(self.log_state_list.shape[0]):
+                w, x, y, z = self.log_state_list[i, 6:10]
+                self.log_R_list.append(np.array([[1-2*(y**2+z**2), 2*(x*y-z*w), 2*(x*z+y*w)],
+                                        [2*(x*y+z*w), 1-2*(x**2+z**2), 2*(y*z-x*w)],
+                                        [2*(x*z-y*w), 2*(y*z+x*w), 1-2*(x**2+y**2)]])
+                            )
+            self.log_R_list = np.array(self.log_R_list)
+            self.x_arrow = self.axs.quiver(self.log_state_list[0,0],self.log_state_list[0,1],self.log_state_list[0,2],
+                                self.arrow_length * self.log_R_list[0, 0, 0], self.arrow_length * self.log_R_list[0, 1, 0], self.arrow_length * self.log_R_list[0, 2, 0], 
+                                color='r', label='X')
+            self.y_arrow = self.axs.quiver(self.log_state_list[0,0],self.log_state_list[0,1],self.log_state_list[0,2],
+                                    self.arrow_length * self.log_R_list[0, 0, 1], self.arrow_length * self.log_R_list[0, 1, 1], self.arrow_length * self.log_R_list[0, 2, 1], 
+                                    color='g', label='Y')
+            self.z_arrow = self.axs.quiver(self.log_state_list[0,0],self.log_state_list[0,1],self.log_state_list[0,2],
+                                    self.arrow_length * self.log_R_list[0, 0, 2], self.arrow_length * self.log_R_list[0, 1, 2], self.arrow_length * self.log_R_list[0, 2, 2], 
+                                    color='b', label='Z')
+            
+            ani = FuncAnimation(self.fig, self.update, 
+                                frames=self.log_R_list.shape[0], interval=10, repeat=True)
+            plt.show()
+
 
 if __name__ == "__main__":
     model = SimpleUAVModel()
