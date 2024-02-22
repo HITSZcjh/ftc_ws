@@ -17,7 +17,7 @@ class RLModel:
         return self._observation.copy().astype(np.float32)
     
     def step(self, action):
-        action = action*6
+        action = action*50
         action = action.astype(np.float64)
         self.env.step(action, self._observation, self._reward, self._done)
         return self._observation.copy().astype(np.float32), self._reward.copy().astype(np.float32), self._done.copy().astype(np.float32)

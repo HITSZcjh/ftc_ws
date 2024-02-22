@@ -17,8 +17,8 @@ class PPO:
         ptu.init_gpu(use_gpu=True)
         self.env = RLModel()
         self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3)
-        self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 1e-4, 0.99)
-        self.batchsize = 250000
+        self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3, 0.99)
+        self.batchsize = 1000000
         self.eval_bathsize = 100000
         self.replay_buffer = ReplayBuffer()
         self.epochs = 50

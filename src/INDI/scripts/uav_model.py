@@ -4,7 +4,7 @@ import numpy as np
 import os
 import timeit
 class SimpleUAVModel(object):
-    def __init__(self, ts:float=0.01, delay_time:float=None, log:bool=False) -> None:
+    def __init__(self, ts:float=0.01, delay_time:float=None, log:bool=False, name="UAVModel") -> None:
         # 系统状态
         p = ca.SX.sym("p", 3, 1)
         v = ca.SX.sym("v", 3, 1)
@@ -73,7 +73,7 @@ class SimpleUAVModel(object):
             q_dot,
             np.linalg.inv(inertia)@(tau+tau_drag-ca.cross(w, inertia@w)),
             1/rotor_time_constant_down*(k*f_target-f_real)
-        )*noise
+        )+noise
 
         self.state_dot = ca.Function("state_dot", [state, f_target, noise, k], [f_expl])
 
@@ -84,7 +84,7 @@ class SimpleUAVModel(object):
         model.xdot = x_dot
         model.u = f_target
         model.p = ca.vertcat(noise, k)
-        model.name = "UAVModel"
+        model.name = name
 
         # 测试RK45积分和acados积分的一致性
         ode = ca.Function('ode',[state, f_target, noise, k], [f_expl])
@@ -115,15 +115,15 @@ class SimpleUAVModel(object):
         self.integrator = AcadosSimSolver(sim, json_file=json_file)
 
         self.action_range = [0.0, 6.0]
-        self.state = np.array([0,0,1,
+        self.state = np.array([0,0,2,
                                0,0,0,
                                1,0,0,0,
                                0,0,0,
                                0,0,0,0])
         self.action = np.zeros(4)
-        self.state_noise = np.ones(17)
+        self.state_noise = np.zeros(17)
         self.k = np.ones(4)
-        self.obs_noise = np.ones(13)
+        self.obs_noise = np.zeros(13)
         self.integrator.set("x", self.state)
 
         self.delay_time = delay_time
@@ -196,7 +196,7 @@ class SimpleUAVModel(object):
     def get_obs(self, obs_noise:np.ndarray=None):
         if obs_noise is not None:
             self.obs_noise = obs_noise
-        obs = self.state[:13] * self.obs_noise
+        obs = self.state[:13] + self.obs_noise
         obs[6:10] = obs[6:10]/np.linalg.norm(obs[6:10])
 
         R = np.array(self.R(self.state))
@@ -284,7 +284,7 @@ class SimpleUAVModel(object):
             self.axs.set_xlim(-5,5)
             self.axs.set_ylim(-5,5)
             self.axs.set_zlim(0,4)
-            self.arrow_length = 0.5
+            self.arrow_length = 1.0
             self.log_R_list = []
             for i in range(self.log_state_list.shape[0]):
                 w, x, y, z = self.log_state_list[i, 6:10]

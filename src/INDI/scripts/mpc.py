@@ -20,7 +20,7 @@ import rospy
 from matplotlib import pyplot as plt
 
 import sys
-
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from rotors_model import RotorsUAVModel
 from uav_model import SimpleUAVModel
 # python强制打印整个数组
@@ -135,8 +135,8 @@ class UAV_MPC(object):
 
         
         ocp.constraints.idxbx = np.array([10, 11, 13, 14, 15, 16])
-        ocp.constraints.lbx = np.array([-5, -5, 0, 0, 0, 0])
-        ocp.constraints.ubx = np.array([5, 5, 
+        ocp.constraints.lbx = np.array([-10, -10, 0, 0, 0, 0])
+        ocp.constraints.ubx = np.array([10, 10, 
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
@@ -184,8 +184,8 @@ if __name__ == '__main__':
         
         obs, R, acc_B, f_real = model.get_obs()
         controller.x0 = np.hstack((obs, f_real))
-        print(controller.x0)
         u = controller.solver.solve_for_x0(controller.x0)
+
         # 此处3倍是考虑电机一阶模型，使得电机在ts时能够达到f_target
         f_target = f_real+u*ts*3
         model.step(f_target)

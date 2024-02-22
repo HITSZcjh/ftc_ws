@@ -4,7 +4,7 @@ namespace QuadrotorEnv
 {
     Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), noise(p_data, NX), k(p_data + NX, NK), obs_map(x_data, Nobs)
     {
-
+        Simulator::ts = ts;
         world_box << -10, 10, -10, 10, 0, 4;
         goal_state << 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
@@ -33,8 +33,9 @@ namespace QuadrotorEnv
         x(2) = 2;
         x(6) = 1;
         u.setZero();
-        noise.setOnes();
+        noise.setZero();
         k.setOnes();
+        k(3) = 0;
 
         sim_in_set(config, dims, in, "x", x_data);
         sim_in_set(config, dims, in, "T", &ts);
@@ -46,8 +47,10 @@ namespace QuadrotorEnv
                          Eigen::Ref<Eigen::Matrix<double, -1, 1>> rewards,
                          Eigen::Ref<Eigen::Matrix<bool, -1, 1>> dones)
     {
-        u = actions.row(agent_id);
+        delta_u = actions.row(agent_id);
         // set boundary
+        delta_u = delta_u.cwiseMax(delta_u_range[0]).cwiseMin(delta_u_range[1]);
+        u += delta_u*ts;
         u = u.cwiseMax(u_range[0]).cwiseMin(u_range[1]);
         // UAVModel_acados_sim_update_params(capsule, p_data, NP);
         sim_in_set(config, dims, in, "x", x_data);
@@ -106,6 +109,7 @@ namespace QuadrotorEnv
     void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)
     {
         obs = obs_map;
+        obs.segment(13,4) = u;
     }
 
     void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs, Eigen::Matrix<double, Nobs, 1> &noise)
@@ -118,12 +122,12 @@ namespace QuadrotorEnv
     {
         double pos_reward = pos_coeff * (x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm();
         double lin_vel_reward = lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
-        double ori_reward = ori_coeff * (x.segment(6, 4) - goal_state.segment(6, 4)).squaredNorm();
-        double ang_vel_reward = ang_vel_coeff * (x.segment(10, 3)).squaredNorm();
-        double act_reward = act_coeff * u.squaredNorm();
-        reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward + 0.1;
-        if(cnt == max_ep_len)
-            reward += 10;
+        double ori_reward = ori_coeff * (x.segment(7, 2)).squaredNorm();
+        double ang_vel_reward = ang_vel_coeff * (x.segment(10, 2)).squaredNorm();
+        double act_reward = act_coeff * delta_u.squaredNorm();
+        reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward + 10.0;
+        // if(cnt == max_ep_len)
+        //     reward += 10;
     }
 
     void Simulator::get_done(bool &done)

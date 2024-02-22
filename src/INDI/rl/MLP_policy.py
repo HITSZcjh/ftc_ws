@@ -15,7 +15,7 @@ class MLPPolicy(nn.Module):
 
         self.mean_net = ptu.build_mlp(input_size=self.state_dim,
                                     output_size=self.action_dim,
-                                    n_layers=n_layers, size=layer_size,output_activation='sigmoid')
+                                    n_layers=n_layers, size=layer_size,output_activation='tanh')
         self.logstd = nn.Parameter(
             torch.zeros(self.action_dim, dtype=torch.float32, device=ptu.device)
         )

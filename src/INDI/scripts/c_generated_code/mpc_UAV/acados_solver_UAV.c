@@ -625,10 +625,10 @@ void UAV_acados_create_5_set_nlp_in(UAV_solver_capsule* capsule, const int N, do
     double* lbx = lubx;
     double* ubx = lubx + NBX;
     
-    lbx[0] = -5;
-    ubx[0] = 5;
-    lbx[1] = -5;
-    ubx[1] = 5;
+    lbx[0] = -10;
+    ubx[0] = 10;
+    lbx[1] = -10;
+    ubx[1] = 10;
     ubx[2] = 6.00318901352;
     ubx[3] = 6.00318901352;
     ubx[4] = 6.00318901352;

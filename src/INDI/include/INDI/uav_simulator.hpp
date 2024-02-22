@@ -21,6 +21,7 @@ namespace QuadrotorEnv
     constexpr int NK = 4;
     constexpr int Nobs = 17; // 带电机转速反馈
     constexpr double u_range[2] = {0, 6};
+    constexpr double delta_u_range[2] = {-50, 50};
 
     // constexpr double omega_range[2] = {-5, 5};
     // constexpr double velocity_range[2] = {-5, 5};
@@ -44,6 +45,7 @@ namespace QuadrotorEnv
         double p_data[NP];
         Eigen::Map<Eigen::Matrix<double, NX, 1>> x;
         Eigen::Map<Eigen::Matrix<double, NU, 1>> u;
+        Eigen::Matrix<double, NU, 1> delta_u;
         Eigen::Map<Eigen::Matrix<double, NX, 1>> noise;
         Eigen::Map<Eigen::Matrix<double, NK, 1>> k;
         Eigen::Map<Eigen::Matrix<double, Nobs, 1>> obs_map;
@@ -60,6 +62,7 @@ namespace QuadrotorEnv
         std::random_device rd_;
         std::mt19937 random_gen_{rd_()};
 
+        double ts;
         Eigen::Matrix<double, 3, 2> world_box;
         Eigen::Matrix<double, NX, 1> goal_state;
         double pos_coeff;

@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="fdd" name="test1" type="test1" output="screen">
+  </node>
+</launch>

@@ -2,16 +2,24 @@ import sys
 sys.path.append("/home/jiao/ftc_ws")
 from src.INDI.scripts.uav_model import SimpleUAVModel
 from PPO import PPO
+import numpy as np
 
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model21-02-"+"2024_14-02-14"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model21-02-"+"2024_14-02-14"
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model21-02-"+"2024_22-02-02"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model21-02-"+"2024_22-02-02"
 if __name__=="__main__":
     model = SimpleUAVModel(ts=0.01,log=True)
     ppo = PPO(None, None, None)
-    ppo.load_model(load_actor_model_path, load_critic_model_path, 150)
+    ppo.load_model(load_actor_model_path, load_critic_model_path, 100)
     state = model.state
-    for i in range(1000):
-        action = ppo.actor.get_action(state)
-        action = action[0]
-        state = model.step(action*6)
+    u = np.zeros(4)
+    state[-4:] = u
+    for i in range(5000):
+        du = ppo.actor.get_action(state)
+        du = du[0]
+        du[-1] = 0
+        du = np.clip(du,-1,1)
+        u += 50*du*model.ts
+        state = model.step(u*6)
+        u = np.clip(u, 0, 6)
+        state[-4:] = u
     model.log_show()
