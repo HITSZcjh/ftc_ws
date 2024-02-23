@@ -3,106 +3,157 @@
 #include <iostream>
 #include <omp.h>
 
-namespace ParticleFilter
+namespace FDD
 {
-    Particle::Particle():
-    uav_simulator(), gen(rd()), k_dis(0, predict_k_sigma), x_dis(0, predict_x_sigma), x(Eigen::Matrix<double, UavSimulator::NX, 1>::Zero()), k(Eigen::Matrix<double, UavSimulator::NK, 1>::Zero()), weights(0)
+
+    Particle::Particle(double *state_data, double *k_data, double *weights, double ts) : simulator(ts), state_data(state_data), k_data(k_data), weights(weights),
+                                                                                         state(state_data, NX), k(k_data, NK), dist(0, 1)
     {
-    }
-    void Particle::SetInitState(Eigen::Matrix<double, UavSimulator::Nobs, 1> &obs)
+        Eigen::Map<const Eigen::VectorXd> obs_noise_std_map(obs_noise_std, Nobs);
+        Eigen::MatrixXd cov = obs_noise_std_map.array().square().matrix().asDiagonal();
+        obs_noise_cov_inv = cov.inverse();
+        obs_noise_coef = 1.0 / std::sqrt(std::pow(2 * M_PI, Nobs) * cov.determinant());
+    };
+
+    Eigen::VectorXd Particle::GetSamples(const double *std, int num)
     {
-        x.segment(0,UavSimulator::Nobs) = obs;
-        x.segment(0,UavSimulator::Nobs) = x.segment(0,UavSimulator::Nobs) + Eigen::Matrix<double, UavSimulator::Nobs, 1>::Random()*predict_x_sigma;
-        x.segment(6,4) = x.segment(6,4)/x.segment(6,4).norm();
-        k = (Eigen::Matrix<double, UavSimulator::NK, 1>::Random()+Eigen::Matrix<double, UavSimulator::NK, 1>::Ones())/2;
-    }
-    void Particle::Update(Eigen::Matrix<double, UavSimulator::Nobs, 1> &obs, Eigen::Matrix<double, UavSimulator::NU,1> &u)
-    {
-        for(int i = 0;i<UavSimulator::NK; i++)
+        Eigen::VectorXd samples(num);
+        for (int i = 0; i < num; i++)
         {
-            k(i) = k(i) + k_dis(gen);
-            k(i) = k(i) > 1 ? 1 : k(i);
-            k(i) = k(i) < 0 ? 0 : k(i);
+            samples(i) = dist(random_gen_) * std[i];
         }
-        uav_simulator.noise = Eigen::Matrix<double, UavSimulator::NX, 1>::Ones();
-        for(int i = 0;i<UavSimulator::NX; i++)
-        {
-            uav_simulator.noise(i) = uav_simulator.noise(i) + x_dis(gen);
-        }
-        uav_simulator.x0 = x;
-        uav_simulator.k = k;
-        uav_simulator.u = u;
-        uav_simulator.step();
-        x = uav_simulator.x1;
-        weights = calculate_temp_constance * std::exp(-0.5 * (obs - x.segment(0,UavSimulator::Nobs)).squaredNorm() / std::pow(predict_z_sigma, 2));
+        return samples;
     }
 
-    Filter::Filter(Eigen::Matrix<double, UavSimulator::Nobs, 1> obs): gen(rd()), dis(0.0, 1.0), particles_ptr(num_particles), 
-    x_est(Eigen::Matrix<double, UavSimulator::NX, 1>::Zero()), k_est(Eigen::Matrix<double, UavSimulator::NK, 1>::Zero())
+    double Particle::GetPDF(Eigen::Ref<Eigen::VectorXd> x,
+                            Eigen::Ref<Eigen::VectorXd> mean,
+                            Eigen::Ref<Eigen::MatrixXd> cov_inv,
+                            double &coef)
     {
-        for(int i = 0; i < num_particles; i++)
-        {
-            particles_ptr[i] = std::make_unique<Particle>();
-            particles_ptr[i]->SetInitState(obs);
-        }
-        x_matrix = Eigen::MatrixXd::Zero(UavSimulator::NX, num_particles);
-        k_matrix = Eigen::MatrixXd::Zero(UavSimulator::NK, num_particles);
+        Eigen::VectorXd diff = x - mean;
+        double exp_val = -0.5 * diff.transpose() * cov_inv * diff;
+        return coef * std::exp(exp_val);
     }
 
-    void Filter::SimpleResample()
+    void Particle::SetInitState(Eigen::Ref<Eigen::Matrix<double, Nobs, 1>> obs)
     {
-        std::vector<double> weights;
-        std::vector<double> cumulative_sum(num_particles);
-        for(int i = 0; i < num_particles; i++)
-            weights.push_back(particles_ptr[i]->weights);
-        std::partial_sum(weights.begin(), weights.end(), cumulative_sum.begin());
-        
+        state.setZero();
+        state.segment(0, Nobs) = obs + GetSamples(obs_noise_std, Nobs);
+        state.segment(6, 4) /= state.segment(6, 4).norm();
 
-        for(int i = 0; i < num_particles; i++)
+        k.setOnes();
+    }
+    void Particle::Update(double *action, Eigen::Ref<Eigen::Matrix<double, Nobs, 1>> obs)
+    {
+        k += GetSamples(k_std, NK);
+        k = k.cwiseMax(k_range[0]).cwiseMin(k_range[1]);
+
+        Eigen::VectorXd state_noise = GetSamples(state_noise_std, NX);
+        for (int i = 0; i < NX; i++)
         {
-            cumulative_sum[i] /= cumulative_sum.back();
+            p_data[i] = state_noise(i);
+        }
+        for (int i = 0; i < NK; i++)
+        {
+            p_data[i + NX] = k(i);
+        }
+        simulator.step(action, p_data, state_data);
+        state.segment(6, 4) /= state.segment(6, 4).norm();
+        *weights = GetPDF(state.segment(0, Nobs), obs, obs_noise_cov_inv, obs_noise_coef);
+    }
+
+    ParticleFilter::ParticleFilter(int num_particles, int num_threads, double ts) : dist(0.0, 1.0), particles_list(num_particles), state_matrix_data(new double[num_particles * NX]), k_matrix_data(new double[num_particles * NK]),
+                                                                                    state_matrix(state_matrix_data, NX, num_particles), k_matrix(k_matrix_data, NK, num_particles), weights(Eigen::VectorXd::Zero(num_particles)), num_particles(num_particles)
+    {
+        for (int i = 0; i < num_particles; i++)
+        {
+            particles_list[i] = std::make_unique<Particle>(&state_matrix_data[i * NX], &k_matrix_data[i * NK], &weights[i], ts);
+        }
+        omp_set_num_threads(num_threads);
+    }
+    void ParticleFilter::SimpleResample()
+    {
+        double sum = weights.sum();
+        if (sum < 1e-8)
+        {
+            weights = Eigen::VectorXd::Ones(num_particles) / num_particles;
+        }
+        else
+        {
+            weights /= sum;
+        }
+        Eigen::VectorXd cumulative_sum = weights;
+        for (int i = 1; i < num_particles; i++)
+        {
+            cumulative_sum(i) += cumulative_sum(i - 1);
         }
 
-        std::vector<double> rn(num_particles);
-        std::generate(rn.begin(), rn.end(), [&]() { return dis(gen); });
-
-        std::vector<Eigen::Matrix<double, UavSimulator::NX, 1>> x_list(num_particles);
-        std::vector<Eigen::Matrix<double, UavSimulator::NK, 1>> k_list(num_particles);
-        #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < num_particles; i++) {
-            auto index = std::lower_bound(cumulative_sum.begin(), cumulative_sum.end(), rn[i]) - cumulative_sum.begin();
-            x_list[i] = particles_ptr[index]->x;
-            k_list[i] = particles_ptr[index]->k;
+        Eigen::VectorXd rn(num_particles);
+        for (int i = 0; i < num_particles; i++)
+        {
+            rn(i) = dist(random_gen_);
         }
-        #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < num_particles; i++) {
-            particles_ptr[i]->x = x_list[i];
-            particles_ptr[i]->k = k_list[i];
+        Eigen::VectorXi index(num_particles);
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < num_particles; i++)
+        {
+            index[i] = std::distance(cumulative_sum.data(), std::upper_bound(cumulative_sum.data(), cumulative_sum.data() + cumulative_sum.size(), rn[i]));
+        }
+        Eigen::MatrixXd state_matrix_temp(state_matrix);
+        Eigen::MatrixXd k_matrix_temp(k_matrix);
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < num_particles; i++)
+        {
+            state_matrix.col(i) = state_matrix_temp.col(index[i]);
+            k_matrix.col(i) = k_matrix_temp.col(index[i]);
         }
     }
 
-    void Filter::GetEstimate()
+    void ParticleFilter::GetEstimate()
     {
-        #pragma omp parallel for schedule(dynamic)
-        for(int i = 0; i < num_particles; i++)
-        {
-            x_matrix.col(i) = particles_ptr[i]->x;
-            k_matrix.col(i) = particles_ptr[i]->k;
-        }
-        x_est = x_matrix.rowwise().mean();
+        state_est = state_matrix.rowwise().mean();
         k_est = k_matrix.rowwise().mean();
     }
 
-    void Filter::Loop(Eigen::Matrix<double, UavSimulator::Nobs, 1> &obs, Eigen::Matrix<double, UavSimulator::NU,1> &u)
+    void ParticleFilter::SetInitState(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)
     {
-        // auto start_time = std::chrono::high_resolution_clock::now();
-        #pragma omp parallel for schedule(dynamic)
-        for(int i = 0; i < num_particles; i++)
+        if(obs.rows()!=Nobs)
         {
-            particles_ptr[i]->Update(obs, u);
+            std::cerr<<"Invalid input size!"<<std::endl;
+            return;
+        }
+        for (int i = 0; i < num_particles; i++)
+        {
+            particles_list[i]->SetInitState(obs);
+        }
+    }
+
+    void ParticleFilter::GetStateMatrix(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state_matrix)
+    {
+        state_matrix = ParticleFilter::state_matrix;
+    }
+
+    void ParticleFilter::Loop(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs,
+                              Eigen::Ref<Eigen::Matrix<double, -1, 1>> action,
+                              Eigen::Ref<Eigen::Matrix<double, -1, 1>> state_est,
+                              Eigen::Ref<Eigen::Matrix<double, -1, 1>> k_est)
+    {
+        if(obs.rows()!=Nobs||action.rows()!=NU)
+        {
+            std::cerr<<"Invalid input size!"<<std::endl;
+            return;
+        }
+        action = action.cwiseMax(action_range[0]).cwiseMin(action_range[1]);
+// auto start_time = std::chrono::high_resolution_clock::now();
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < num_particles; i++)
+        {
+            particles_list[i]->Update(action.data(), obs);
         }
         SimpleResample();
         GetEstimate();
+        state_est = ParticleFilter::state_est;
+        k_est = ParticleFilter::k_est;
         // auto end_time = std::chrono::high_resolution_clock::now();
         // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
         // std::cout << "solve time: " << duration.count() << " microseconds" << std::endl;

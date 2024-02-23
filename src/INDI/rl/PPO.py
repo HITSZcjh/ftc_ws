@@ -120,9 +120,10 @@ class PPO:
     
 test = False
 
-load_model = False
-load_actor_model_path = "/home/jiao/rl_ws/test_uav/model/actor_model14-10-2023_22-31-41"
-load_critic_model_path = "/home/jiao/rl_ws/test_uav/model/critic_model14-10-2023_22-31-41"
+load_model = True
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model22-02-2024_22-47-55"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model22-02-2024_22-47-55"
+num = 260
 if __name__ == "__main__":
     if(test):
         ppo = PPO(None, None, None)
@@ -144,7 +145,7 @@ if __name__ == "__main__":
         ppo = PPO(logdir, save_actor_model_path, save_critic_model_path)
 
         if load_model:
-            ppo.load_model(load_actor_model_path, load_critic_model_path, 640)
+            ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
         ppo.train_loop()
 

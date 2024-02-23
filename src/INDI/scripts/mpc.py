@@ -23,6 +23,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from rotors_model import RotorsUAVModel
 from uav_model import SimpleUAVModel
+import time
 # python强制打印整个数组
 np.set_printoptions(threshold=sys.maxsize, precision=4, suppress=True)
 
@@ -140,7 +141,7 @@ class UAV_MPC(object):
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
                                         self.rotor_thrust_coeff*self.max_rotors_speed**2, 
-                                        0.01])
+                                        0.2])
 
         ocp.constraints.idxbu = np.array([0, 1, 2, 3])
         ocp.constraints.lbu = np.array([-15*7, -15*7, -15*7, -15*7])
@@ -165,8 +166,8 @@ if __name__ == '__main__':
 
     rospy.init_node("UAV_MPC_node", anonymous=True)
     
-    ts = 0.01
-    model = RotorsUAVModel(ts,delay_time=0.03)
+    ts = 0.005
+    model = RotorsUAVModel(ts,delay_time=None)
     controller = UAV_MPC(dt=0.05)
     controller.yref[0:3] = np.array([0, 0, 1])
     controller.yref_e[0:3] = np.array([0, 0, 1])
@@ -174,8 +175,8 @@ if __name__ == '__main__':
     f_real_list = []
     f_target_list = []
     # while not rospy.is_shutdown():
-    for j in range(1000):
-        time_now = rospy.Time.now().to_sec()
+    for j in range(10000):
+        start_time = time.perf_counter()
         for i in range(controller.N+1):
             if(i<controller.N):
                 controller.solver.set(i, 'yref', controller.yref)
@@ -187,14 +188,14 @@ if __name__ == '__main__':
         u = controller.solver.solve_for_x0(controller.x0)
 
         # 此处3倍是考虑电机一阶模型，使得电机在ts时能够达到f_target
-        f_target = f_real+u*ts*3
+        f_target = f_real+u*0.05
         model.step(f_target)
 
         rate.sleep()
-        time_record = rospy.Time.now().to_sec() - time_now
-        print("estimation time is {}".format(time_record))
         f_real_list.append(f_real.copy())
         f_target_list.append(f_target.copy())
+        end_time = time.perf_counter()
+        print("time: ", end_time-start_time)
 
     t = np.linspace(0, 0.01*len(f_real_list), len(f_real_list))
     fig7,axs7 = plt.subplots(4,1)

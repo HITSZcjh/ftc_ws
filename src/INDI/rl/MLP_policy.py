@@ -41,6 +41,16 @@ class MLPPolicy(nn.Module):
         act = distr.sample()
         return ptu.to_numpy(act)
 
+    def get_action_without_sample(self, state):
+        if len(state.shape) > 1:
+            state = state
+        else:
+            state = state[None]
+
+        state = ptu.from_numpy(state)
+        act = self.mean_net(state)
+        return ptu.to_numpy(act)
+
     def forward(self, state: torch.FloatTensor):
         batch_mean = self.mean_net(state)
         scale_tril = torch.diag(torch.exp(self.logstd))

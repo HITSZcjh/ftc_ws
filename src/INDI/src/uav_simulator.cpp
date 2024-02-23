@@ -2,7 +2,7 @@
 #include <iostream>
 namespace QuadrotorEnv
 {
-    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), noise(p_data, NX), k(p_data + NX, NK), obs_map(x_data, Nobs)
+    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double,3,1>::Zero())
     {
         Simulator::ts = ts;
         world_box << -10, 10, -10, 10, 0, 4;
@@ -35,7 +35,6 @@ namespace QuadrotorEnv
         u.setZero();
         noise.setZero();
         k.setOnes();
-        k(3) = 0;
 
         sim_in_set(config, dims, in, "x", x_data);
         sim_in_set(config, dims, in, "T", &ts);
@@ -50,9 +49,9 @@ namespace QuadrotorEnv
         delta_u = actions.row(agent_id);
         // set boundary
         delta_u = delta_u.cwiseMax(delta_u_range[0]).cwiseMin(delta_u_range[1]);
-        u += delta_u*ts;
+        u += delta_u * ts;
         u = u.cwiseMax(u_range[0]).cwiseMin(u_range[1]);
-        // UAVModel_acados_sim_update_params(capsule, p_data, NP);
+        UAVModel_acados_sim_update_params(capsule, p_data, NP);
         sim_in_set(config, dims, in, "x", x_data);
         sim_in_set(config, dims, in, "u", u_data);
         status = UAVModel_acados_sim_solve(capsule);
@@ -68,9 +67,9 @@ namespace QuadrotorEnv
 
         get_reward(rewards(agent_id));
         get_done(dones(agent_id));
-        cnt ++;
+        cnt++;
 
-        if(dones(agent_id))
+        if (dones(agent_id))
             reset();
         get_obs(obs.row(agent_id));
     }
@@ -83,7 +82,7 @@ namespace QuadrotorEnv
 
         x(0) = uniform_dist_(random_gen_);
         x(1) = uniform_dist_(random_gen_);
-        x(2) = uniform_dist_(random_gen_)+2;
+        x(2) = uniform_dist_(random_gen_) + 2;
 
         x(3) = uniform_dist_(random_gen_);
         x(4) = uniform_dist_(random_gen_);
@@ -99,22 +98,28 @@ namespace QuadrotorEnv
         x(11) = uniform_dist_(random_gen_);
         x(12) = uniform_dist_(random_gen_);
 
-        x(13) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
-        x(14) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
-        x(15) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
-        x(16) = (uniform_dist_(random_gen_)+1)*u_range[1]/2;
+        x(13) = (uniform_dist_(random_gen_) + 1) * u_range[1] / 2;
+        x(14) = (uniform_dist_(random_gen_) + 1) * u_range[1] / 2;
+        x(15) = (uniform_dist_(random_gen_) + 1) * u_range[1] / 2;
+        x(16) = (uniform_dist_(random_gen_) + 1) * u_range[1] / 2;
 
+        for(int i=0;i<4;i++)
+            k(i) = (uniform_dist_(random_gen_) + 1) / 2;
+        u.setZero();
+        omega_lpf.last_output = x.segment(10, 3);
     }
 
     void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)
     {
-        obs = obs_map;
-        obs.segment(13,4) = u;
+        obs.segment(0, 13) = x.segment(0, 13);
+        obs.segment(13, 4) = u;
+        get_acc(obs(17));
+        omega_lpf.calculate_derivative(x.segment(10, 3), obs.segment(18, 3));
     }
 
     void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs, Eigen::Matrix<double, Nobs, 1> &noise)
     {
-        obs = obs_map + noise;
+        // obs.segment(0, NX) = obs_map + noise;
         obs.segment(6, 4) = obs.segment(6, 4) / obs.segment(6, 4).norm();
     }
 
@@ -132,12 +137,17 @@ namespace QuadrotorEnv
 
     void Simulator::get_done(bool &done)
     {
-        if(x(0)<world_box(0,0)||x(0)>world_box(0,1)||x(1)<world_box(1,0)||x(1)>world_box(1,1)||x(2)<world_box(2,0)||x(2)>world_box(2,1)||cnt == max_ep_len)
+        if (x(0) < world_box(0, 0) || x(0) > world_box(0, 1) || x(1) < world_box(1, 0) || x(1) > world_box(1, 1) || x(2) < world_box(2, 0) || x(2) > world_box(2, 1) || cnt == max_ep_len)
         {
             done = true;
         }
         else
             done = false;
+    }
+
+    void Simulator::get_acc(double &acc)
+    {
+        acc = x.segment(13, 4).sum() * mass_inv;
     }
 
     void Simulator::test()
@@ -164,5 +174,13 @@ namespace QuadrotorEnv
         }
 
         UAVModel_acados_sim_solver_free_capsule(capsule);
+    }
+
+    void LPF_t::calculate_derivative(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
+                                     Eigen::Ref<Eigen::Matrix<double, -1, 1>> derivative)
+    {
+        output = (cutoff_freq * ts * input + last_output) / (1 + cutoff_freq * ts);
+        derivative = (output - last_output) / ts;
+        last_output = output;
     }
 }

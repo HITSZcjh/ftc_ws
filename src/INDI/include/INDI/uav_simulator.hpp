@@ -19,12 +19,25 @@ namespace QuadrotorEnv
     constexpr int NU = UAVMODEL_NU;
     constexpr int NP = UAVMODEL_NP;
     constexpr int NK = 4;
-    constexpr int Nobs = 17; // 带电机转速反馈
+    constexpr int Nobs = 21;
     constexpr double u_range[2] = {0, 6};
     constexpr double delta_u_range[2] = {-50, 50};
-
+    constexpr double mass_inv = 1 / 0.73;
     // constexpr double omega_range[2] = {-5, 5};
     // constexpr double velocity_range[2] = {-5, 5};
+
+    class LPF_t
+    {
+    public:
+        double ts;
+        double cutoff_freq; // rad/s
+        Eigen::Matrix<double, -1, 1> last_output;
+        Eigen::Matrix<double, -1, 1> output;
+        LPF_t(double cutoff_freq, double ts, Eigen::Matrix<double, -1, 1> input) : cutoff_freq(cutoff_freq), ts(ts), last_output(input){};
+        void calculate_derivative(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
+                           Eigen::Ref<Eigen::Matrix<double, -1, 1>> output);
+    };
+
     class Simulator
     {
     public:
@@ -38,6 +51,7 @@ namespace QuadrotorEnv
         void get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs, Eigen::Matrix<double, Nobs, 1> &noise);
         void get_reward(double &reward);
         void get_done(bool &done);
+        void get_acc(double &acc);
         void reset();
         void test();
         double x_data[NX];
@@ -48,7 +62,7 @@ namespace QuadrotorEnv
         Eigen::Matrix<double, NU, 1> delta_u;
         Eigen::Map<Eigen::Matrix<double, NX, 1>> noise;
         Eigen::Map<Eigen::Matrix<double, NK, 1>> k;
-        Eigen::Map<Eigen::Matrix<double, Nobs, 1>> obs_map;
+        LPF_t omega_lpf;
 
     private:
         UAVModel_sim_solver_capsule *capsule;

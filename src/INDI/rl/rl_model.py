@@ -21,3 +21,10 @@ class RLModel:
         action = action.astype(np.float64)
         self.env.step(action, self._observation, self._reward, self._done)
         return self._observation.copy().astype(np.float32), self._reward.copy().astype(np.float32), self._done.copy().astype(np.float32)
+    
+if __name__ == '__main__':
+    model = RLModel()
+    action = np.ones((model.num_envs, model.action_dim))
+    for i in range(100):
+        obs = model.step(action)[0]
+        print(obs[0])

@@ -4,64 +4,98 @@
 #include <random>
 #include <memory>
 // #include <cmath>
-namespace ParticleFilter
+namespace FDD
 {
-    constexpr int num_particles = 1000;
-    constexpr double predict_k_sigma = 0.05;
-    constexpr double predict_x_sigma = 0.05;
-    constexpr double predict_z_sigma = 0.05;
-    constexpr double calculate_temp_constance = 1.0 / std::sqrt(std::pow(2 * M_PI * std::pow(predict_z_sigma, 2), UavSimulator::Nobs));
-    //5.31154e+11;
-    // 1.0 / std::sqrt(std::pow(2 * M_PI * std::pow(predict_z_sigma, 2), UavSimulator::Nobs));
+    constexpr double action_range[2] = {0, 6};
+    constexpr double k_range[2] = {0, 1};
+
+    // constexpr double state_noise_std[FDD::NX] = {1.5, 1.5, 1.5,
+    //                                              2.5, 2.5, 2.5,
+    //                                              0.0, 0.0, 0.0, 0.0,
+    //                                              1.5, 1.5, 1.5,
+    //                                              0, 0, 0, 0};
+
+    // constexpr double obs_noise_std[FDD::Nobs] = {0.02, 0.02, 0.02,
+    //                                              0.1, 0.1, 0.1,
+    //                                              0.017, 0.017, 0.017, 0.017,
+    //                                              0.1, 0.1, 0.1};
+
+    // constexpr double k_std[FDD::NK] = {0.05, 0.05, 0.05, 0.05};
+
+    constexpr double state_noise_std[FDD::NX] = {2, 2, 2,
+                                                 3, 3, 3,
+                                                 0.0, 0.0, 0.0, 0.0,
+                                                 3, 3, 3,
+                                                 0.5, 0.5, 0.5, 0.5};
+
+    constexpr double obs_noise_std[FDD::Nobs] = {0.3, 0.3, 0.3,
+                                                 0.3, 0.3, 0.3,
+                                                 0.05, 0.05, 0.05, 0.05,
+                                                 0.3, 0.3, 0.3};
+
+    constexpr double k_std[FDD::NK] = {0.05, 0.05, 0.05, 0.05};
+
+
     class Particle
     {
     public:
-        Particle();
+        Particle(double *state_data, double *k_data, double *weights, double ts);
         ~Particle()
-        {}
-        void SetInitState(Eigen::Matrix<double, UavSimulator::Nobs, 1> &obs);
-        void Update(Eigen::Matrix<double, UavSimulator::Nobs, 1> &obs, Eigen::Matrix<double, UavSimulator::NU,1> &u);
-        UavSimulator::Simulator uav_simulator;
-        double weights;
-        Eigen::Matrix<double, UavSimulator::NX, 1> x;
-        Eigen::Matrix<double, UavSimulator::NK, 1> k;
-        
-        // // 重载等号运算符
-        // Particle& operator=(const Particle& other) {
-        //     if (this != &other) {
-        //         // 使用 Eigen 的 = 运算符
-        //         x = other.x;
-        //         k = other.k;
-        //         weights = other.weights;
-        //     }
-        //     return *this;
-        // }
+        {
+        }
+        void SetInitState(Eigen::Ref<Eigen::Matrix<double, FDD::Nobs, 1>> obs);
+        void Update(double *action, Eigen::Ref<Eigen::Matrix<double, FDD::Nobs, 1>> obs);
+        Eigen::VectorXd GetSamples(const double *std, int num);
+        double GetPDF(Eigen::Ref<Eigen::VectorXd> x,
+                      Eigen::Ref<Eigen::VectorXd> mean,
+                      Eigen::Ref<Eigen::MatrixXd> cov_inv,
+                      double &coef);
+        Simulator simulator;
+        double *state_data;
+        double *k_data;
+        double *weights;
+        double p_data[FDD::NP];
+        Eigen::Map<Eigen::Matrix<double, FDD::NX, 1>> state;
+        Eigen::Map<Eigen::Matrix<double, FDD::NK, 1>> k;
 
     private:
-        std::random_device rd;
-        std::mt19937 gen;
-        std::normal_distribution<double> k_dis;
-        std::normal_distribution<double> x_dis;
-
+        std::normal_distribution<double> dist;
+        std::random_device rd_;
+        std::mt19937 random_gen_{rd_()};
+        Eigen::MatrixXd obs_noise_cov_inv;
+        double obs_noise_coef;
     };
 
-    class Filter
+    class ParticleFilter
     {
     public:
-        Filter(Eigen::Matrix<double, UavSimulator::Nobs, 1> obs);
-        ~Filter()
-        {}
+        ParticleFilter(int num_particles, int num_threads, double ts);
+        ~ParticleFilter()
+        {
+            delete[] state_matrix_data;
+            delete[] k_matrix_data;
+        }
         void SimpleResample();
         void GetEstimate();
-        void Loop(Eigen::Matrix<double, UavSimulator::Nobs, 1> &obs, Eigen::Matrix<double, UavSimulator::NU,1> &u);
-        Eigen::Matrix<double, UavSimulator::NX, 1> x_est;
-        Eigen::Matrix<double, UavSimulator::NK, 1> k_est;
+        void SetInitState(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs);
+        void Loop(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs,
+                  Eigen::Ref<Eigen::Matrix<double, -1, 1>> action,
+                  Eigen::Ref<Eigen::Matrix<double, -1, 1>> state_est,
+                  Eigen::Ref<Eigen::Matrix<double, -1, 1>> k_est);
+        void GetStateMatrix(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state_matrix);
+        Eigen::Matrix<double, NX, 1> state_est;
+        Eigen::Matrix<double, NK, 1> k_est;
+
     private:
-        std::random_device rd;
-        std::mt19937 gen;
-        std::uniform_real_distribution<double> dis;
-        std::vector<std::shared_ptr<Particle>> particles_ptr;
-        Eigen::MatrixXd x_matrix;
-        Eigen::MatrixXd k_matrix;
+        int num_particles;
+        std::random_device rd_;
+        std::mt19937 random_gen_{rd_()};
+        std::uniform_real_distribution<double> dist;
+        std::vector<std::unique_ptr<Particle>> particles_list;
+        double *state_matrix_data;
+        double *k_matrix_data;
+        Eigen::Map<Eigen::MatrixXd> state_matrix;
+        Eigen::Map<Eigen::MatrixXd> k_matrix;
+        Eigen::VectorXd weights;
     };
 }
