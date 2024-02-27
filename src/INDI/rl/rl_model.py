@@ -6,6 +6,7 @@ class RLModel:
         self.env = VecEnv()
         self.num_envs = self.env.get_num_envs()
         self.state_dim = self.env.get_obs_dim()
+        # self.state_dim = 17
         self.action_dim = self.env.get_action_dim()
         self._observation = np.zeros([self.num_envs, self.state_dim],
                                     dtype=np.float64)

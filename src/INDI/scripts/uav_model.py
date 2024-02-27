@@ -3,6 +3,26 @@ import casadi as ca
 import numpy as np
 import os
 import timeit
+
+
+class LPF(object):
+    def __init__(self, ts, cutoff_freq, data):
+        self.ts = ts
+        self.cutoff_freq = cutoff_freq
+        if isinstance(data, np.ndarray):
+            self.last_output = np.zeros_like(data)
+        else:
+            self.last_output = 0.0
+    def calc(self, input):
+        output = (self.cutoff_freq * self.ts * input + self.last_output) / (self.cutoff_freq * self.ts + 1)
+        self.last_output = output
+        return output
+    def calc_with_derivative(self, input):
+        output = (self.cutoff_freq * self.ts * input + self.last_output) / (self.cutoff_freq * self.ts + 1)
+        derivative = (output - self.last_output) / self.ts
+        self.last_output = output
+        return output, derivative
+
 class SimpleUAVModel(object):
     def __init__(self, ts:float=0.01, delay_time:float=None, log:bool=False, name="UAVModel") -> None:
         # 系统状态
@@ -24,7 +44,7 @@ class SimpleUAVModel(object):
         Kf = 8.54858e-06  # rotot_motor_constant
         rotor_drag_coeff = 0.016  # rotor_moment_constant
         body_length = 0.17
-        mass = 0.73
+        self.mass = 0.73
         g = 9.81
         inertia = np.array([[0.007, 0, 0], [0, 0.007, 0], [0, 0, 0.012]])
         R = ca.vertcat(
@@ -69,7 +89,7 @@ class SimpleUAVModel(object):
         k = ca.SX.sym("k", f_target.size()[0], 1)
         f_expl = ca.vertcat(
             v,
-            G+1/mass*(R@F+f_drag),
+            G+1/self.mass*(R@F+f_drag),
             q_dot,
             np.linalg.inv(inertia)@(tau+tau_drag-ca.cross(w, inertia@w)),
             1/rotor_time_constant_down*(k*f_target-f_real)
@@ -148,6 +168,8 @@ class SimpleUAVModel(object):
             self.log_state_list = []
             self.log_action_list = []
 
+        self.omega_lpf = LPF(self.ts, 50, np.zeros(3))
+
     def step(self, action:np.ndarray, state_noise:np.ndarray=None, k:np.ndarray=None, state:np.ndarray=None):
         if state_noise is not None:
             self.state_noise = state_noise
@@ -218,9 +240,15 @@ class SimpleUAVModel(object):
             return self.delay_obs_list[0], self.delay_R_list[0], self.delay_acc_B_list[0], self.delay_f_real_list[0]
         else:
             return obs, R, acc_B, f_real
-
+    
+    # without noise
+    def get_obs_rl(self):
+        obs = self.state[:13]
+        acc = np.sum(self.state[-4:])/self.mass
+        omega_dot_f = self.omega_lpf.calc_with_derivative(self.state[10:13])[1]
+        return obs, acc, omega_dot_f
+    
     def update(self, frame):
-        # global self.x_arrow, self.y_arrow, self.z_arrow, ax6
         # 旋转坐标轴
         self.x_arrow.remove()
         self.y_arrow.remove()

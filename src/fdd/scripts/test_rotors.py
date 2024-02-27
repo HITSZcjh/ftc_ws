@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     obs, R, acc_B, f_real = model.get_obs()
     pf1.set_init_state(obs)
-    traj = CircleTrajectory([0,0,3], 3, 1)
+    traj = CircleTrajectory([0,0,3], 3, 1.5)
 
     mpc2 = UAV_MPC(dt=0.05)
     model.k = np.array([1, 1, 1, 1])
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     k_est = None
     f_target = np.zeros(4)
     i = 0
-    for i in range(4000):
+    for i in range(2300):
         # i+=1
         start_time = time.perf_counter()
         print("**** step: ", i)
@@ -47,10 +47,10 @@ if __name__ == "__main__":
 
         if not fault:
             for j in range(mpc1.N):
-                pos = traj.step(t+j*mpc1.dt)
+                pos = traj.step(t+j*mpc1.dt, i)
                 mpc1.yref[0:3] = pos
                 mpc1.solver.set(j, "yref", mpc1.yref)
-            pos = traj.step(t+mpc1.N*mpc1.dt)
+            pos = traj.step(t+mpc1.N*mpc1.dt, i)
             mpc1.yref_e[0:3] = pos
             mpc1.solver.set(mpc1.N, "yref", mpc1.yref_e)
 
@@ -61,10 +61,10 @@ if __name__ == "__main__":
             #     f_target = f_target/k_est
         else:
             for j in range(mpc2.N):
-                pos = traj.step(t+j*mpc2.dt)
+                pos = traj.step(t+j*mpc2.dt, i)
                 mpc2.yref[0:3] = pos
                 mpc2.solver.set(j, "yref", mpc2.yref)
-            pos = traj.step(t+mpc2.N*mpc2.dt)
+            pos = traj.step(t+mpc2.N*mpc2.dt, i)
             mpc2.yref_e[0:3] = pos
             mpc2.solver.set(mpc2.N, "yref", mpc2.yref_e)
             mpc2.solver.solve_for_x0(np.hstack((obs, f_real)))

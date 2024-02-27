@@ -5,8 +5,8 @@ namespace QuadrotorEnv
     Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double,3,1>::Zero())
     {
         Simulator::ts = ts;
-        world_box << -10, 10, -10, 10, 0, 4;
-        goal_state << 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        world_box << -5, 5, -5, 5, 0, 6;
+        goal_state << 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
         pos_coeff = cfg["rl"]["pos_coeff"].as<double>();
         ori_coeff = cfg["rl"]["ori_coeff"].as<double>();
@@ -82,7 +82,7 @@ namespace QuadrotorEnv
 
         x(0) = uniform_dist_(random_gen_);
         x(1) = uniform_dist_(random_gen_);
-        x(2) = uniform_dist_(random_gen_) + 2;
+        x(2) = uniform_dist_(random_gen_) + 3;
 
         x(3) = uniform_dist_(random_gen_);
         x(4) = uniform_dist_(random_gen_);
@@ -103,10 +103,30 @@ namespace QuadrotorEnv
         x(15) = (uniform_dist_(random_gen_) + 1) * u_range[1] / 2;
         x(16) = (uniform_dist_(random_gen_) + 1) * u_range[1] / 2;
 
-        for(int i=0;i<4;i++)
-            k(i) = (uniform_dist_(random_gen_) + 1) / 2;
         u.setZero();
         omega_lpf.last_output = x.segment(10, 3);
+
+        k.setOnes();
+
+        double random = (uniform_dist_(random_gen_) + 1) / 2;
+        double random_k;
+        if(random < 0.3)
+            random_k = 0;
+        else if(random < 0.8)
+            random_k = (uniform_dist_(random_gen_) + 1) / 4;
+        else
+            random_k = 1-(uniform_dist_(random_gen_) + 1) / 4;
+
+        random = (uniform_dist_(random_gen_) + 1) / 2;
+        if(random < 0.2)
+            k(0) = random_k;
+        else if(random < 0.4)
+            k(1) = random_k;
+        else if(random < 0.6)
+            k(2) = random_k;
+        else if(random < 0.8)
+            k(3) = random_k;
+
     }
 
     void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)

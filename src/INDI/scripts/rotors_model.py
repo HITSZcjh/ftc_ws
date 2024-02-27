@@ -7,7 +7,27 @@ from mav_msgs.msg import Actuators
 
 from matplotlib import pyplot as plt
 import rospy
-from uav_model import SimpleUAVModel
+import sys
+sys.path.append("/home/jiao/ftc_ws")
+from src.INDI.scripts.uav_model import SimpleUAVModel
+
+class LPF(object):
+    def __init__(self, ts, cutoff_freq, data):
+        self.ts = ts
+        self.cutoff_freq = cutoff_freq
+        if isinstance(data, np.ndarray):
+            self.last_output = np.zeros_like(data)
+        else:
+            self.last_output = 0.0
+    def calc(self, input):
+        output = (self.cutoff_freq * self.ts * input + self.last_output) / (self.cutoff_freq * self.ts + 1)
+        self.last_output = output
+        return output
+    def calc_with_derivative(self, input):
+        output = (self.cutoff_freq * self.ts * input + self.last_output) / (self.cutoff_freq * self.ts + 1)
+        derivative = (output - self.last_output) / self.ts
+        self.last_output = output
+        return output, derivative
 
 class RotorsUAVModel(object):
     def __init__(self, ts, delay_time=None, log=False) -> None:
@@ -65,8 +85,10 @@ class RotorsUAVModel(object):
         self.log = log
         if self.log:
             self.log_state_list = []
+        
+        self.omega_lpf = LPF(self.ts, 50, np.zeros(3))
 
-    def get_obs(self):
+    def get_obs(self, rl=False):
         p = np.array([self.odometry_msg.pose.pose.position.x, self.odometry_msg.pose.pose.position.y, self.odometry_msg.pose.pose.position.z])
         v_b = np.array([self.odometry_msg.twist.twist.linear.x, self.odometry_msg.twist.twist.linear.y, self.odometry_msg.twist.twist.linear.z])
         q = np.array([self.odometry_msg.pose.pose.orientation.w, self.odometry_msg.pose.pose.orientation.x, self.odometry_msg.pose.pose.orientation.y, self.odometry_msg.pose.pose.orientation.z])
@@ -94,7 +116,11 @@ class RotorsUAVModel(object):
         if self.log:
             self.log_state_list.append(np.hstack((obs, f_real)))
 
-        return obs, R, acc_B, f_real
+        if rl:
+            omega_dot_f = self.omega_lpf.calc_with_derivative(obs[10:13])[1]
+            return obs, acc_B[2], omega_dot_f
+        else:
+            return obs, R, acc_B, f_real
 
     def step(self, f_target):
         f_target = np.clip(f_target, 0, self.rotor_thrust_coeff*self.max_rotors_speed**2)
@@ -102,7 +128,7 @@ class RotorsUAVModel(object):
         if self.delay_time is not None:
             self.f_target_list.append(f_target)
             self.f_target_list.pop(0)
-
+        
         self.cmd.header.stamp = rospy.Time.now()
         self.cmd.rotor_thrusts = f_target*self.k
         self.cmd_pub.publish(self.cmd)

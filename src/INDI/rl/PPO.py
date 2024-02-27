@@ -13,14 +13,14 @@ import matplotlib.pyplot as plt
 np.set_printoptions(precision=2,suppress=True,threshold=np.inf)
 
 class PPO:
-    def __init__(self, logdir, save_actor_model_path, save_critic_model_path) -> None:
-        ptu.init_gpu(use_gpu=True)
+    def __init__(self, logdir, save_actor_model_path, save_critic_model_path, use_gpu) -> None:
+        ptu.init_gpu(use_gpu=use_gpu)
         self.env = RLModel()
         self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3)
         self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3, 0.99)
         self.batchsize = 1000000
         self.eval_bathsize = 100000
-        self.replay_buffer = ReplayBuffer()
+        self.replay_buffer = ReplayBuffer(max_size=self.batchsize)
         self.epochs = 50
         self.eps = 0.2
         self.n_iter = 1000
@@ -121,12 +121,13 @@ class PPO:
 test = False
 
 load_model = True
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model22-02-2024_22-47-55"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model22-02-2024_22-47-55"
-num = 260
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model25-02-2024_16-23-35"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model25-02-2024_16-23-35"
+num = 250
+
 if __name__ == "__main__":
     if(test):
-        ppo = PPO(None, None, None)
+        ppo = PPO(None, None, None, True)
         ppo.load_model(load_actor_model_path, load_critic_model_path, 360)
         ppo.eval_plot()
     else:
@@ -142,7 +143,7 @@ if __name__ == "__main__":
             os.makedirs(save_actor_model_path)
         if not (os.path.exists(save_critic_model_path)):
             os.makedirs(save_critic_model_path)
-        ppo = PPO(logdir, save_actor_model_path, save_critic_model_path)
+        ppo = PPO(logdir, save_actor_model_path, save_critic_model_path, True)
 
         if load_model:
             ppo.load_model(load_actor_model_path, load_critic_model_path, num)
