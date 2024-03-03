@@ -14,9 +14,9 @@ import matplotlib.pyplot as plt
 # load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model22-02-2024_22-47-55"
 # num = 250
 
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model25-02-2024_16-23-35"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model25-02-2024_16-23-35"
-num = 250
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model02-03-2024_20-58-31"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model02-03-2024_20-58-31"
+num = 360
 
 
 if __name__=="__main__":
@@ -43,7 +43,7 @@ if __name__=="__main__":
 
         du = np.clip(du,-1,1)
         u += 50*du*model.ts
-        model.k = np.array([1,1,0,1])
+        model.k = np.array([1,1,1,0])
         model.step(u)
         u = np.clip(u, 0, 6)
         rate.sleep()

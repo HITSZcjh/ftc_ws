@@ -12,10 +12,14 @@ import numpy as np
 # load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model22-02-2024_22-47-55"
 # num = 250
 
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model25-02-2024_16-23-35"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model25-02-2024_16-23-35"
-num = 300
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model02-03-2024_20-58-31"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model02-03-2024_20-58-31"
+num = 360
 
+
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model02-03-2024_23-41-53"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model02-03-2024_23-41-53"
+num = 60
 
 if __name__=="__main__":
     model = SimpleUAVModel(ts=0.01,log=True)
@@ -24,7 +28,7 @@ if __name__=="__main__":
 
     state = np.zeros(21)
     u = 2*np.ones(4)
-    for i in range(8000):
+    for i in range(5000):
         obs, acc, omega_dot_f = model.get_obs_rl()
 
         state[:13] = obs
@@ -37,7 +41,7 @@ if __name__=="__main__":
 
         du = np.clip(du,-1,1)
         u += 50*du*model.ts
-        model.k = np.array([1,0,1,1])
+        model.k = np.array([0,1,1,1])
         model.step(u)
         u = np.clip(u, 0, 6)
 

@@ -2,7 +2,15 @@
 #include <iostream>
 namespace QuadrotorEnv
 {
-    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double,3,1>::Zero())
+    void Simulator::get_noise(const double *std, int num, Eigen::Ref<Eigen::VectorXd> noise)
+    {
+        for (int i = 0; i < num; i++)
+        {
+            noise(i) = normal_dist_(random_gen_) * std[i];
+        }
+    }
+
+    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), state_noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double,3,1>::Zero())
     {
         Simulator::ts = ts;
         world_box << -5, 5, -5, 5, 0, 6;
@@ -33,7 +41,8 @@ namespace QuadrotorEnv
         x(2) = 2;
         x(6) = 1;
         u.setZero();
-        noise.setZero();
+        state_noise.setZero();
+        obs_noise.setZero();
         k.setOnes();
 
         sim_in_set(config, dims, in, "x", x_data);
@@ -47,13 +56,15 @@ namespace QuadrotorEnv
                          Eigen::Ref<Eigen::Matrix<bool, -1, 1>> dones)
     {
         delta_u = actions.row(agent_id);
-        // set boundary
         delta_u = delta_u.cwiseMax(delta_u_range[0]).cwiseMin(delta_u_range[1]);
         u += delta_u * ts;
         u = u.cwiseMax(u_range[0]).cwiseMin(u_range[1]);
-        UAVModel_acados_sim_update_params(capsule, p_data, NP);
-        sim_in_set(config, dims, in, "x", x_data);
         sim_in_set(config, dims, in, "u", u_data);
+
+        get_noise(state_noise_std, NX, state_noise);
+        UAVModel_acados_sim_update_params(capsule, p_data, NP);
+        
+        sim_in_set(config, dims, in, "x", x_data);
         status = UAVModel_acados_sim_solve(capsule);
         if (status != ACADOS_SUCCESS)
         {
@@ -71,7 +82,7 @@ namespace QuadrotorEnv
 
         if (dones(agent_id))
             reset();
-        get_obs(obs.row(agent_id));
+        get_obs_with_noise(obs.row(agent_id));
     }
 
     void Simulator::reset()
@@ -137,9 +148,14 @@ namespace QuadrotorEnv
         omega_lpf.calculate_derivative(x.segment(10, 3), obs.segment(18, 3));
     }
 
-    void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs, Eigen::Matrix<double, Nobs, 1> &noise)
+    void Simulator::get_obs_with_noise(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)
     {
-        // obs.segment(0, NX) = obs_map + noise;
+        obs.segment(0, 13) = x.segment(0, 13);
+        obs.segment(13, 4) = u;
+        get_acc(obs(17));
+        omega_lpf.calculate_derivative(x.segment(10, 3), obs.segment(18, 3));
+        get_noise(obs_noise_std, Nobs, obs_noise);
+        obs += obs_noise;
         obs.segment(6, 4) = obs.segment(6, 4) / obs.segment(6, 4).norm();
     }
 

@@ -16,7 +16,7 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from casadi import *
 
 from geometry_msgs.msg import PoseStamped
-import rospy
+import time
 from matplotlib import pyplot as plt
 
 import sys
@@ -161,23 +161,19 @@ class UAV_MPC(object):
         self.solver = AcadosOcpSolver(ocp, json_file=json_file)
 
 
-if __name__ == '__main__':
-
-    rospy.init_node("UAV_MPC_node", anonymous=True)
-    
+if __name__ == '__main__':    
     ts = 0.01
-    model = SimpleUAVModel(ts,delay_time=0.03,log=True)
+    model = SimpleUAVModel(ts,log=True)
     # model.k[-1] = 0
     controller = UAV_MPC(dt=0.05)
-    controller.yref[0:3] = np.array([0, 0, 1])
-    controller.yref_e[0:3] = np.array([0, 0, 1])
-    rate = rospy.Rate(1/ts)
+    controller.yref[0:3] = np.array([0, 0, 3])
+    controller.yref_e[0:3] = np.array([0, 0, 3])
     f_real_list = []
     f_target_list = []
     last_u = np.zeros(4)
     # while not rospy.is_shutdown():
-    for j in range(100):
-        time_now = rospy.Time.now().to_sec()
+    for j in range(5000):
+        start_time = time.perf_counter()
         for i in range(controller.N+1):
             if(i<controller.N):
                 controller.solver.set(i, 'yref', controller.yref)
@@ -187,15 +183,13 @@ if __name__ == '__main__':
         obs, R, acc_B, f_real = model.get_obs()
         controller.x0 = np.hstack((obs, f_real))
         u = controller.solver.solve_for_x0(controller.x0)
-        print(u-last_u)
         last_u = u
         # 此处3倍是考虑电机一阶模型，使得电机在ts时能够达到f_target
-        f_target = f_real+u*ts*3
+        f_target = f_real+u*ts*4
         model.step(f_target)
 
-        rate.sleep()
-        time_record = rospy.Time.now().to_sec() - time_now
-        print("estimation time is {}".format(time_record))
+        end_time = time.perf_counter()
+        print("time: ", end_time-start_time)
         f_real_list.append(f_real.copy())
         f_target_list.append(f_target.copy())
 
