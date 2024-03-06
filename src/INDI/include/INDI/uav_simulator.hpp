@@ -15,13 +15,15 @@
 #include <yaml-cpp/yaml.h>
 namespace QuadrotorEnv
 {
-
+    constexpr int NFLAG = 1;
     constexpr int NX = UAVMODEL_NX;
-    constexpr int NU = UAVMODEL_NU;
+    constexpr int NU = UAVMODEL_NU + NFLAG;
     constexpr int NP = UAVMODEL_NP;
     constexpr int NK = 4;
-    constexpr int Nobs = 21;
+    constexpr int Nobs = 21 + NFLAG;
     constexpr double u_range[2] = {0, 6};
+    constexpr double flag_range[2] = {0, 1};
+
     constexpr double delta_u_range[2] = {-50, 50};
     constexpr double mass_inv = 1 / 0.73;
     // constexpr double omega_range[2] = {-5, 5};
@@ -87,15 +89,16 @@ namespace QuadrotorEnv
         void reset();
         void test();
         double x_data[NX];
-        double u_data[NU];
+        double u_data[NU - NFLAG];
         double p_data[NP];
         Eigen::Map<Eigen::Matrix<double, NX, 1>> x;
-        Eigen::Map<Eigen::Matrix<double, NU, 1>> u;
-        Eigen::Matrix<double, NU, 1> delta_u;
+        Eigen::Map<Eigen::Matrix<double, NU - NFLAG, 1>> u;
+        Eigen::Matrix<double, NU - NFLAG, 1> delta_u;
         Eigen::Map<Eigen::Matrix<double, NX, 1>> state_noise;
         Eigen::Matrix<double, Nobs, 1> obs_noise;
         Eigen::Map<Eigen::Matrix<double, NK, 1>> k;
         LPF_t omega_lpf;
+        LPF_t flag_lpf;
 
     private:
         void get_noise(const double *std, int num, Eigen::Ref<Eigen::VectorXd> noise);

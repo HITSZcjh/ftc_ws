@@ -10,7 +10,7 @@ namespace QuadrotorEnv
         }
     }
 
-    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), state_noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double, 3, 1>::Zero())
+    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU-NFLAG), state_noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double, 3, 1>::Zero()), flag_lpf(20, ts, Eigen::Matrix<double, NFLAG, 1>::Zero())
     {
         Simulator::ts = ts;
         world_box << -5, 5, -5, 5, 0, 6;
@@ -59,10 +59,10 @@ namespace QuadrotorEnv
                          Eigen::Ref<Eigen::Matrix<double, -1, 1>> rewards,
                          Eigen::Ref<Eigen::Matrix<bool, -1, 1>> dones)
     {
-        delta_u = actions.row(agent_id);
+        delta_u = actions.row(agent_id).segment(0, 4);
         delta_u = delta_u.cwiseMax(delta_u_range[0]).cwiseMin(delta_u_range[1]);
-        u += delta_u * ts;
-        u = u.cwiseMax(u_range[0]).cwiseMin(u_range[1]);
+        u.segment(0, 4) += delta_u * ts;
+        u.segment(0, 4) = u.segment(0, 4).cwiseMax(u_range[0]).cwiseMin(u_range[1]);
         sim_in_set(config, dims, in, "u", u_data);
         if(add_noise)
             get_noise(state_noise_std, NX, state_noise);
@@ -84,12 +84,19 @@ namespace QuadrotorEnv
         get_done(dones(agent_id));
         cnt++;
 
+        Eigen::VectorXd flag = actions.row(agent_id).segment(4, NFLAG);
+        flag = flag.cwiseMax(flag_range[0]).cwiseMin(flag_range[1]);
         if (dones(agent_id))
             reset();
         if(add_noise)
             get_obs_with_noise(obs.row(agent_id));
         else
             get_obs(obs.row(agent_id));
+
+        if(dones(agent_id))
+            obs.row(agent_id).segment(21, NFLAG).setOnes();
+        else
+            flag_lpf.calc(flag, obs.row(agent_id).segment(21, NFLAG));
     }
 
     void Simulator::reset()
@@ -123,6 +130,7 @@ namespace QuadrotorEnv
 
         u.setZero();
         omega_lpf.last_output = x.segment(10, 3);
+        flag_lpf.last_output.setOnes();
 
         k.setOnes();
 

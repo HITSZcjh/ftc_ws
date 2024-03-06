@@ -53,9 +53,9 @@ load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-
 num = 40
 
 # 9.修改网络层数，不可用
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_15-43-54"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_15-43-54"
-num = 250
+# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_15-43-54"
+# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_15-43-54"
+# num = 250
 
 if __name__=="__main__":
     model = SimpleUAVModel(ts=0.01, log=True)
@@ -81,7 +81,7 @@ if __name__=="__main__":
 
         du = np.clip(du,-1,1)
         u += 50*du*model.ts
-        model.k = np.array([0,1,1,1])
+        model.k = np.array([1,1,1,0])
         model.step(u)
         u = np.clip(u, 0, 6)
 

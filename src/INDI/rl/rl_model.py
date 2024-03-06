@@ -18,15 +18,18 @@ class RLModel:
         return self._observation.copy().astype(np.float32)
     
     def step(self, action):
-        action = action*50
+        action = action.copy()
+        action[:,:4] = action[:,:4]*50
+        action[:,4:] = (action[:,4:]+1)/2
         action = action.astype(np.float64)
         self.env.step(action, self._observation, self._reward, self._done)
         return self._observation.copy().astype(np.float32), self._reward.copy().astype(np.float32), self._done.copy().astype(np.float32)
     
 if __name__ == '__main__':
     model = RLModel()
-    # model.reset()
-    action = np.ones((model.num_envs, model.action_dim))
+    model.reset()
+    action = 0.5*np.ones((model.num_envs, model.action_dim))
     for i in range(10):
         obs = model.step(action)[0]
+        print(action[0])
         print(obs[0])

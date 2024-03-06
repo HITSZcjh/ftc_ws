@@ -52,7 +52,6 @@ def sample_steps(env, policy, steps):
         next_states.append(state)
         rewards.append(reward)
         dones.append(done)
-
     states = np.array(states)
     actions = np.array(actions)
     rewards = np.array(rewards)
