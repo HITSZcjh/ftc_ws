@@ -135,7 +135,7 @@ class SimpleUAVModel(object):
         self.integrator = AcadosSimSolver(sim, json_file=json_file)
 
         self.action_range = [0.0, 6.0]
-        self.state = np.array([0,0,2,
+        self.state = np.array([0,0,3,
                                0,0,0,
                                1,0,0,0,
                                0,0,0,
@@ -145,6 +145,8 @@ class SimpleUAVModel(object):
         self.k = np.ones(4)
         self.obs_noise = np.zeros(13)
         self.integrator.set("x", self.state)
+
+        self.omega_lpf = LPF(self.ts, 50, np.zeros(3))
 
         self.delay_time = delay_time
         if self.delay_time is not None:
@@ -163,12 +165,18 @@ class SimpleUAVModel(object):
             self.delay_acc_B_list = [acc_B.copy() for _ in range(num)]
             self.delay_f_real_list = [f_real.copy() for _ in range(num)]
 
+            # RL
+            acc = np.sum(self.state[-4:])/self.mass
+            omega_dot_f = self.omega_lpf.calc_with_derivative(self.state[10:13])[1]
+            self.delay_acc_list = [acc for _ in range(num)]
+            self.delay_omega_dot_f_list = [omega_dot_f for _ in range(num)]
+
         self.log = log
         if self.log:
             self.log_state_list = []
             self.log_action_list = []
 
-        self.omega_lpf = LPF(self.ts, 50, np.zeros(3))
+
 
     def step(self, action:np.ndarray, state_noise:np.ndarray=None, k:np.ndarray=None, state:np.ndarray=None):
         if state_noise is not None:
@@ -246,7 +254,17 @@ class SimpleUAVModel(object):
         obs = self.state[:13]
         acc = np.sum(self.state[-4:])/self.mass
         omega_dot_f = self.omega_lpf.calc_with_derivative(self.state[10:13])[1]
-        return obs, acc, omega_dot_f
+
+        if self.delay_time is not None:
+            self.delay_obs_list.append(obs.copy())
+            self.delay_obs_list.pop(0)
+            self.delay_acc_list.append(acc)
+            self.delay_acc_list.pop(0)
+            self.delay_omega_dot_f_list.append(omega_dot_f)
+            self.delay_omega_dot_f_list.pop(0)
+            return self.delay_obs_list[0], self.delay_acc_list[0], self.delay_omega_dot_f_list[0]
+        else:
+            return obs, acc, omega_dot_f
     
     def update(self, frame):
         # 旋转坐标轴

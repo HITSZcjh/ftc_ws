@@ -11,7 +11,7 @@
 
 #include <Eigen/Eigen>
 #include <random>
-
+#include <deque>
 #include <yaml-cpp/yaml.h>
 namespace QuadrotorEnv
 {
@@ -27,33 +27,33 @@ namespace QuadrotorEnv
     // constexpr double omega_range[2] = {-5, 5};
     // constexpr double velocity_range[2] = {-5, 5};
 
-    constexpr double state_noise_std[QuadrotorEnv::NX] = {0.05, 0.05, 0.05,
-                                                 0.5, 0.5, 0.5,
-                                                 0.0, 0.0, 0.0, 0.0,
-                                                 0.5, 0.5, 0.5,
-                                                 0, 0, 0, 0};
-    constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.02, 0.02, 0.02,
-                                                 0.1, 0.1, 0.1,
-                                                 0.017, 0.017, 0.017, 0.017,
-                                                 0.1, 0.1, 0.1,
-                                                 0,0,0,0,
-                                                 0.1,
-                                                 0.1,0.1,0.1,
-                                                 };
-
-    // constexpr double state_noise_std[QuadrotorEnv::NX] = {0.25, 0.25, 0.25,
-    //                                              2.5, 2.5, 2.5,
+    // constexpr double state_noise_std[QuadrotorEnv::NX] = {0.05, 0.05, 0.05,
+    //                                              0.5, 0.5, 0.5,
     //                                              0.0, 0.0, 0.0, 0.0,
-    //                                              2.5, 2.5, 2.5,
+    //                                              0.5, 0.5, 0.5,
     //                                              0, 0, 0, 0};
-    // constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.1, 0.1, 0.1,
-    //                                              0.5, 0.5, 0.5,
-    //                                              0.085, 0.085, 0.085, 0.085,
-    //                                              0.5, 0.5, 0.5,
+    // constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.02, 0.02, 0.02,
+    //                                              0.1, 0.1, 0.1,
+    //                                              0.017, 0.017, 0.017, 0.017,
+    //                                              0.1, 0.1, 0.1,
     //                                              0,0,0,0,
-    //                                              0.5,
-    //                                              0.5,0.5,0.5,
+    //                                              0.1,
+    //                                              0.1,0.1,0.1,
     //                                              };
+
+    constexpr double state_noise_std[QuadrotorEnv::NX] = {0.1, 0.1, 0.1,
+                                                 1, 1, 1,
+                                                 0.01, 0.01, 0.01, 0.01,
+                                                 1, 1, 1,
+                                                 2, 2, 2, 2};
+    constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.05, 0.05, 0.05,
+                                                 0.2, 0.2, 0.2,
+                                                 0.085, 0.085, 0.085, 0.085,
+                                                 0.2, 0.2, 0.2,
+                                                 0,0,0,0,
+                                                 0.2,
+                                                 0.2,0.2,0.2,
+                                                 };
 
 
     class LPF_t
@@ -64,7 +64,9 @@ namespace QuadrotorEnv
         Eigen::Matrix<double, -1, 1> last_output;
         Eigen::Matrix<double, -1, 1> output;
         LPF_t(double cutoff_freq, double ts, Eigen::Matrix<double, -1, 1> input) : cutoff_freq(cutoff_freq), ts(ts), last_output(input){};
-        void calculate_derivative(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
+        void calc(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
+                       Eigen::Ref<Eigen::Matrix<double, -1, 1>> output);
+        void calc_derivative(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
                            Eigen::Ref<Eigen::Matrix<double, -1, 1>> output);
     };
 
@@ -108,6 +110,10 @@ namespace QuadrotorEnv
         std::random_device rd_;
         std::mt19937 random_gen_{rd_()};
 
+        int add_noise;
+        double delay_time;
+        int delay_step;
+        std::deque<Eigen::Matrix<double, Nobs, 1>> delay_obs_list;
         double ts;
         Eigen::Matrix<double, 3, 2> world_box;
         Eigen::Matrix<double, NX, 1> goal_state;

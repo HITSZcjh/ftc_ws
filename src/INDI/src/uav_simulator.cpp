@@ -10,7 +10,7 @@ namespace QuadrotorEnv
         }
     }
 
-    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), state_noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double,3,1>::Zero())
+    Simulator::Simulator(double ts, YAML::Node cfg) : x(x_data, NX), u(u_data, NU), state_noise(p_data, NX), k(p_data + NX, NK), omega_lpf(50, ts, Eigen::Matrix<double, 3, 1>::Zero())
     {
         Simulator::ts = ts;
         world_box << -5, 5, -5, 5, 0, 6;
@@ -22,6 +22,10 @@ namespace QuadrotorEnv
         ang_vel_coeff = cfg["rl"]["ang_vel_coeff"].as<double>();
         act_coeff = cfg["rl"]["act_coeff"].as<double>();
         max_ep_len = cfg["rl"]["max_ep_len"].as<int>();
+        add_noise = cfg["env"]["add_noise"].as<int>();
+        delay_time = cfg["env"]["delay_time"].as<double>();
+        delay_step = (int)(delay_time/ts) + 1;
+        delay_obs_list.resize(delay_step);
 
         capsule = UAVModel_acados_sim_solver_create_capsule();
         status = UAVModel_acados_sim_create(capsule);
@@ -60,10 +64,10 @@ namespace QuadrotorEnv
         u += delta_u * ts;
         u = u.cwiseMax(u_range[0]).cwiseMin(u_range[1]);
         sim_in_set(config, dims, in, "u", u_data);
-
-        get_noise(state_noise_std, NX, state_noise);
+        if(add_noise)
+            get_noise(state_noise_std, NX, state_noise);
         UAVModel_acados_sim_update_params(capsule, p_data, NP);
-        
+
         sim_in_set(config, dims, in, "x", x_data);
         status = UAVModel_acados_sim_solve(capsule);
         if (status != ACADOS_SUCCESS)
@@ -82,7 +86,10 @@ namespace QuadrotorEnv
 
         if (dones(agent_id))
             reset();
-        get_obs_with_noise(obs.row(agent_id));
+        if(add_noise)
+            get_obs_with_noise(obs.row(agent_id));
+        else
+            get_obs(obs.row(agent_id));
     }
 
     void Simulator::reset()
@@ -121,23 +128,45 @@ namespace QuadrotorEnv
 
         double random = (uniform_dist_(random_gen_) + 1) / 2;
         double random_k;
-        if(random < 0.3)
+        if (random < 0.3)
             random_k = 0;
-        else if(random < 0.8)
+        else if (random < 0.8)
             random_k = (uniform_dist_(random_gen_) + 1) / 4;
         else
-            random_k = 1-(uniform_dist_(random_gen_) + 1) / 4;
+            random_k = 1 - (uniform_dist_(random_gen_) + 1) / 4;
 
         random = (uniform_dist_(random_gen_) + 1) / 2;
-        if(random < 0.2)
+        if (random < 0.2)
             k(0) = random_k;
-        else if(random < 0.4)
+        else if (random < 0.4)
             k(1) = random_k;
-        else if(random < 0.6)
+        else if (random < 0.6)
             k(2) = random_k;
-        else if(random < 0.8)
+        else if (random < 0.8)
             k(3) = random_k;
 
+        Eigen::Matrix<double, Nobs, 1> obs;
+        if(add_noise)
+        {
+            obs.segment(0, 13) = x.segment(0, 13);
+            obs.segment(13, 4) = u;
+            get_acc(obs(17));
+            omega_lpf.calc_derivative(x.segment(10, 3), obs.segment(18, 3));
+            get_noise(obs_noise_std, Nobs, obs_noise);
+            obs += obs_noise;
+            obs.segment(6, 4) = obs.segment(6, 4) / obs.segment(6, 4).norm();
+        }
+        else
+        {
+            obs.segment(0, 13) = x.segment(0, 13);
+            obs.segment(13, 4) = u;
+            get_acc(obs(17));
+            omega_lpf.calc_derivative(x.segment(10, 3), obs.segment(18, 3));
+        }
+        for(int i = 0;i<delay_step;i++)
+        {
+            delay_obs_list[i] = obs;
+        }
     }
 
     void Simulator::get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)
@@ -145,7 +174,13 @@ namespace QuadrotorEnv
         obs.segment(0, 13) = x.segment(0, 13);
         obs.segment(13, 4) = u;
         get_acc(obs(17));
-        omega_lpf.calculate_derivative(x.segment(10, 3), obs.segment(18, 3));
+        omega_lpf.calc_derivative(x.segment(10, 3), obs.segment(18, 3));
+        
+        delay_obs_list.pop_front();
+        delay_obs_list.push_back(obs);
+        obs = delay_obs_list[0];
+
+        obs.segment(13, 4) = u;
     }
 
     void Simulator::get_obs_with_noise(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs)
@@ -153,20 +188,34 @@ namespace QuadrotorEnv
         obs.segment(0, 13) = x.segment(0, 13);
         obs.segment(13, 4) = u;
         get_acc(obs(17));
-        omega_lpf.calculate_derivative(x.segment(10, 3), obs.segment(18, 3));
+        omega_lpf.calc_derivative(x.segment(10, 3), obs.segment(18, 3));
         get_noise(obs_noise_std, Nobs, obs_noise);
         obs += obs_noise;
         obs.segment(6, 4) = obs.segment(6, 4) / obs.segment(6, 4).norm();
+        
+        delay_obs_list.pop_front();
+        delay_obs_list.push_back(obs);
+        obs = delay_obs_list[0];
+        
+        obs.segment(13, 4) = u;
     }
 
     void Simulator::get_reward(double &reward)
     {
+        // double pos_reward = pos_coeff * exp(-(x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm());
+        // double lin_vel_reward = lin_vel_coeff * exp(-(x.segment(3, 3)).squaredNorm());
+        // double ori_reward = ori_coeff * exp(-(x.segment(7, 2)).squaredNorm());
+        // double ang_vel_reward = ang_vel_coeff * exp(-(x.segment(10, 2)).squaredNorm());
+        // double act_reward = act_coeff * exp(-delta_u.squaredNorm());
+        // reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward;
+
         double pos_reward = pos_coeff * (x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm();
         double lin_vel_reward = lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
         double ori_reward = ori_coeff * (x.segment(7, 2)).squaredNorm();
         double ang_vel_reward = ang_vel_coeff * (x.segment(10, 2)).squaredNorm();
         double act_reward = act_coeff * delta_u.squaredNorm();
         reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward + 10.0;
+        
         // if(cnt == max_ep_len)
         //     reward += 10;
     }
@@ -212,7 +261,14 @@ namespace QuadrotorEnv
         UAVModel_acados_sim_solver_free_capsule(capsule);
     }
 
-    void LPF_t::calculate_derivative(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
+    void LPF_t::calc(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
+                          Eigen::Ref<Eigen::Matrix<double, -1, 1>> output)
+    {
+        output = (cutoff_freq * ts * input + last_output) / (1 + cutoff_freq * ts);
+        last_output = output;
+    }
+
+    void LPF_t::calc_derivative(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
                                      Eigen::Ref<Eigen::Matrix<double, -1, 1>> derivative)
     {
         output = (cutoff_freq * ts * input + last_output) / (1 + cutoff_freq * ts);

@@ -25,7 +25,8 @@ class RLModel:
     
 if __name__ == '__main__':
     model = RLModel()
+    # model.reset()
     action = np.ones((model.num_envs, model.action_dim))
-    for i in range(100):
+    for i in range(10):
         obs = model.step(action)[0]
         print(obs[0])

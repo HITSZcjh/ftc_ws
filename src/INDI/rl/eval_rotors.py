@@ -18,12 +18,19 @@ load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model02-03-20
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model02-03-2024_20-58-31"
 num = 360
 
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model03-03-2024_12-30-19"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model03-03-2024_12-30-19"
+num = 180
+
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model04-03-2024_22-16-05"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model04-03-2024_22-16-05"
+num = 280
 
 if __name__=="__main__":
     rospy.init_node("UAV_RL_node", anonymous=True)
     ts = 0.01
     rate = rospy.Rate(1/ts)
-    model = RotorsUAVModel(ts=ts,delay_time=0.03, log=True)
+    model = RotorsUAVModel(ts=ts, delay_time=0.03 ,log=True)
     ppo = PPO(None, None, None, False)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
@@ -44,6 +51,7 @@ if __name__=="__main__":
         du = np.clip(du,-1,1)
         u += 50*du*model.ts
         model.k = np.array([1,1,1,0])
+        u[3] = 0
         model.step(u)
         u = np.clip(u, 0, 6)
         rate.sleep()
