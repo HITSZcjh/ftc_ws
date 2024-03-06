@@ -17,7 +17,7 @@ if __name__ == "__main__":
     pf1 = ParticleFilterCPP(250, 25, ts, log=True)
     pf1.set_init_state(model.get_obs()[0])
     # pf2 = ParticleFilter(250, model1, ts, log=True)
-    traj = CircleTrajectory([0,0,2], 3, 1)
+    traj = CircleTrajectory([-3,0,3], 3, 1)
 
     mpc2 = UAV_MPC(dt=0.05)
     model.k = np.array([0.9, 0.9, 0.9, 0.9])

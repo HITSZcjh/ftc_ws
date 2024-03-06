@@ -26,7 +26,7 @@ from uav_model import SimpleUAVModel
 import time
 # python强制打印整个数组
 np.set_printoptions(threshold=sys.maxsize, precision=4, suppress=True)
-
+from src.traj.script.traj import CircleTrajectory
 
 class UAV_MPC(object):
     def __init__(self, dt=0.04):
@@ -166,30 +166,35 @@ if __name__ == '__main__':
 
     rospy.init_node("UAV_MPC_node", anonymous=True)
     
-    ts = 0.005
-    model = RotorsUAVModel(ts,delay_time=None)
+    ts = 0.01
+    model = RotorsUAVModel(ts,delay_time=0.03,log=True)
     controller = UAV_MPC(dt=0.05)
     controller.yref[0:3] = np.array([0, 0, 1])
     controller.yref_e[0:3] = np.array([0, 0, 1])
     rate = rospy.Rate(1/ts)
     f_real_list = []
     f_target_list = []
+    traj = CircleTrajectory([-3,0,3], 3, 0.5)
+
     # while not rospy.is_shutdown():
-    for j in range(10000):
+    for i in range(2000):
         start_time = time.perf_counter()
-        for i in range(controller.N+1):
-            if(i<controller.N):
-                controller.solver.set(i, 'yref', controller.yref)
+        for j in range(controller.N+1):
+            pos = traj.step(i*ts+j*controller.dt,i)
+            if(j<controller.N):
+                controller.yref[0:3] = pos
+                controller.solver.set(j, 'yref', controller.yref)
             else:
-                controller.solver.set(i, 'yref', controller.yref_e)
+                controller.yref_e[0:3] = pos
+                controller.solver.set(j, 'yref', controller.yref_e)
         
         obs, R, acc_B, f_real = model.get_obs()
         controller.x0 = np.hstack((obs, f_real))
         u = controller.solver.solve_for_x0(controller.x0)
 
         # 此处3倍是考虑电机一阶模型，使得电机在ts时能够达到f_target
-        f_target = f_real+u*0.05
-        model.step(f_target)
+        f_target = f_real+u*ts*3
+        model.step(f_target, traj.step(i*ts,i))
 
         rate.sleep()
         f_real_list.append(f_real.copy())
@@ -205,5 +210,5 @@ if __name__ == '__main__':
     for i in range(4):
         axs7[i].plot(t, f_real_list[:,i], label='f_real')
         axs7[i].plot(t, f_target_list[:,i], label='f_target')
-
+    model.log_show()
     plt.show()

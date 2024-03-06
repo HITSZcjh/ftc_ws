@@ -10,7 +10,8 @@ import rospy
 import sys
 sys.path.append("/home/jiao/ftc_ws")
 from src.INDI.scripts.uav_model import SimpleUAVModel
-
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 class LPF(object):
     def __init__(self, ts, cutoff_freq, data):
         self.ts = ts
@@ -60,6 +61,10 @@ class RotorsUAVModel(object):
         self.cmd.armed = True
         self.cmd.control_mode = ControlCommand.ROTOR_THRUSTS
 
+        self.real_traj_pub = rospy.Publisher("/hummingbird/real_traj", Path, queue_size=1)
+        self.target_traj_pub = rospy.Publisher("/hummingbird/target_traj", Path, queue_size=1)
+        self.real_traj = Path()
+        self.target_traj = Path()
         # self.cmd_pub = rospy.Publisher("/hummingbird/command/motor_speed", Actuators, queue_size=1)
         # self.cmd = Actuators()
 
@@ -122,7 +127,7 @@ class RotorsUAVModel(object):
         else:
             return obs, R, acc_B, f_real
 
-    def step(self, f_target):
+    def step(self, f_target, target=None):
         f_target = np.clip(f_target, 0, self.rotor_thrust_coeff*self.max_rotors_speed**2)
 
         if self.delay_time is not None:
@@ -132,6 +137,30 @@ class RotorsUAVModel(object):
         self.cmd.header.stamp = rospy.Time.now()
         self.cmd.rotor_thrusts = f_target*self.k
         self.cmd_pub.publish(self.cmd)
+
+        self.real_traj.header.stamp = rospy.Time.now()
+        self.real_traj.header.frame_id = "world"
+        pose = PoseStamped()
+        pose.header.stamp = rospy.Time.now()
+        pose.header.frame_id = "world"
+        pose.pose.position.x = self.odometry_msg.pose.pose.position.x
+        pose.pose.position.y = self.odometry_msg.pose.pose.position.y
+        pose.pose.position.z = self.odometry_msg.pose.pose.position.z
+        self.real_traj.poses.append(pose)
+        self.real_traj_pub.publish(self.real_traj)
+
+        if target is not None:
+            self.target_traj.header.stamp = rospy.Time.now()
+            self.target_traj.header.frame_id = "world"
+            pose = PoseStamped()
+            pose.header.stamp = rospy.Time.now()
+            pose.header.frame_id = "world"
+            pose.pose.position.x = target[0]
+            pose.pose.position.y = target[1]
+            pose.pose.position.z = target[2]
+            self.target_traj.poses.append(pose)
+            self.target_traj_pub.publish(self.target_traj)
+
         # self.cmd.angular_velocities = np.sqrt(f_target/self.rotor_thrust_coeff)
         # self.cmd_pub.publish(self.cmd)
         

@@ -6,6 +6,7 @@ from scipy.spatial.transform import Rotation
 from matplotlib.animation import FuncAnimation, FFMpegWriter
 from mpl_toolkits.mplot3d import Axes3D
 import rospy
+from src.traj.script.traj import CircleTrajectory
 
 
 BW = 20
@@ -146,10 +147,11 @@ if __name__ == "__main__":
     rospy.init_node("rotors_model")
     ts = 0.01
     rate = rospy.Rate(1/ts)
-    model = RotorsUAVModel(ts, delay_time=0.07)
+    model = RotorsUAVModel(ts, delay_time=0.07, log=True)
     pos_controller = PositionController(ts)
     pat_controller = PrimaryAxisAttitudeController(ts)
     indi_controller = INDIController(ts, model.AllocationMatrix_failed)
+    traj = CircleTrajectory([-3,0,3], 3, 0.5)
 
     pos_target = np.array([[0],[0],[1]])
 
@@ -166,13 +168,14 @@ if __name__ == "__main__":
     f_target_list = []
     # i = 0
     # while not rospy.is_shutdown():
-    for i in range(1500):
+    for i in range(2000):
         # i += 1
         print("****** ",i," ******")
-
-        if i>750:
-            pat_controller.n_B = np.array([[0.1],[0.1],[0.98]])
-
+        pos_target = traj.step(i*ts, i).reshape(-1,1)
+        # if i<500:
+        #     pat_controller.n_B = np.array([[0.0],[0.0],[1.0]])
+        # elif i<1000:
+        #     pat_controller.n_B = np.array([[0.2],[0.2],[0.92]])
         time_now = rospy.Time.now().to_sec()
         obs, R, acc_B, f_real = model.get_obs()
         f_z = acc_B[2,0]
@@ -208,7 +211,7 @@ if __name__ == "__main__":
 
         action = np.array([u_target[0,0], u_target[1,0], u_target[2,0], 0])
         f_target_list.append(action.copy())
-        model.step(action)
+        model.step(action, pos_target)
         rate.sleep()
         time_record = rospy.Time.now().to_sec() - time_now
         print("estimation time is {}".format(time_record))
@@ -307,4 +310,6 @@ if __name__ == "__main__":
     for i in range(4):
         axs8[i].plot(t, tau1[i,:])
         axs8[i].plot(t, tau2[i,:])
+    model.log_show()
+    
     plt.show()

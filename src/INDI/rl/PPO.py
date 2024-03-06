@@ -120,10 +120,10 @@ class PPO:
     
 test = False
 
-load_model = False
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_13-03-19"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_13-03-19"
-num = 40
+load_model = True
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model06-03-2024_11-37-58"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model06-03-2024_11-37-58"
+num = 600
 
 if __name__ == "__main__":
     if(test):

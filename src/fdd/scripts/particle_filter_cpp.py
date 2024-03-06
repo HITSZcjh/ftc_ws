@@ -1,11 +1,29 @@
 from FDDParticleFilter import ParticleFilter
 import numpy as np
-
+class LPF(object):
+    def __init__(self, ts, cutoff_freq, data):
+        self.ts = ts
+        self.cutoff_freq = cutoff_freq
+        if isinstance(data, np.ndarray):
+            self.last_output = np.zeros_like(data)
+        else:
+            self.last_output = 0.0
+    def calc(self, input):
+        output = (self.cutoff_freq * self.ts * input + self.last_output) / (self.cutoff_freq * self.ts + 1)
+        self.last_output = output
+        return output
+    def calc_with_derivative(self, input):
+        output = (self.cutoff_freq * self.ts * input + self.last_output) / (self.cutoff_freq * self.ts + 1)
+        derivative = (output - self.last_output) / self.ts
+        self.last_output = output
+        return output, derivative
 class ParticleFilterCPP(object):
     def __init__(self, num_particles, num_threads, ts, log=False) -> None:
         self.pf = ParticleFilter(num_particles, num_threads, ts)
         self.state_est = np.zeros(17,dtype=np.float64)
         self.k_est = np.ones(4,dtype=np.float64)
+        
+        self.k_lpf = LPF(ts, 0.005, self.k_est)
 
         self.ts = ts
         self.log = log
@@ -21,7 +39,7 @@ class ParticleFilterCPP(object):
         action = action.astype(np.float64)
         obs = obs.astype(np.float64)
         self.pf.Loop(obs, action, self.state_est, self.k_est)
-
+        # self.k_est = self.k_lpf.calc(self.k_est)
         if self.log:
             self.log_state_est_list.append(self.state_est.copy())
             self.log_k_est_list.append(self.k_est.copy())
