@@ -24,7 +24,7 @@ class LPF(object):
         return output, derivative
 
 class SimpleUAVModel(object):
-    def __init__(self, ts:float=0.01, delay_time:float=None, log:bool=False, name="UAVModel") -> None:
+    def __init__(self, ts:float=0.01, delay_time:float=None, log:bool=False, name="UAVModel", BW=5) -> None:
         # 系统状态
         p = ca.SX.sym("p", 3, 1)
         v = ca.SX.sym("v", 3, 1)
@@ -146,7 +146,7 @@ class SimpleUAVModel(object):
         self.obs_noise = np.zeros(13)
         self.integrator.set("x", self.state)
 
-        self.omega_lpf = LPF(self.ts, 50, np.zeros(3))
+        self.omega_lpf = LPF(self.ts, BW, np.zeros(3))
 
         self.delay_time = delay_time
         if self.delay_time is not None:

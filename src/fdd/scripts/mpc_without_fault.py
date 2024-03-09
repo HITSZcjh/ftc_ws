@@ -8,10 +8,11 @@ from acados_template import AcadosModel
 import os
 
 import sys
-
+sys.path.append("/home/jiao/ftc_ws")
 import scipy.linalg
-
+from src.INDI.scripts.rotors_model import RotorsUAVModel
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+from src.traj.script.traj import CircleTrajectory
 
 from casadi import *
 
@@ -162,21 +163,26 @@ if __name__ == '__main__':
 
     rospy.init_node("UAV_MPC_node", anonymous=True)
     
-    ts = 0.01
+    ts = 0.005
     model = RotorsUAVModel(ts,delay_time=0.03)
-    controller = UAV_MPC(dt=0.05)
+    controller = UAV_MPC_Without_Fault(dt=0.05)
     controller.yref[0:3] = np.array([0, 0, 1])
     controller.yref_e[0:3] = np.array([0, 0, 1])
     rate = rospy.Rate(1/ts)
+    traj = CircleTrajectory([0,0,3], 3, 1)
+
     f_real_list = []
     f_target_list = []
     # while not rospy.is_shutdown():
     for j in range(1000):
         time_now = rospy.Time.now().to_sec()
         for i in range(controller.N+1):
+            pos = traj.step(i*ts+j*controller.dt,i)
             if(i<controller.N):
+                controller.yref[0:3] = pos
                 controller.solver.set(i, 'yref', controller.yref)
             else:
+                controller.yref_e[0:3] = pos
                 controller.solver.set(i, 'yref', controller.yref_e)
         
         obs, R, acc_B, f_real = model.get_obs()
@@ -184,7 +190,7 @@ if __name__ == '__main__':
         u = controller.solver.solve_for_x0(controller.x0)
 
         # 此处3倍是考虑电机一阶模型，使得电机在ts时能够达到f_target
-        f_target = f_real+u*ts*3
+        f_target = f_real+u*ts*6
         model.step(f_target)
 
         rate.sleep()

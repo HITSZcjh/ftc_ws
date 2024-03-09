@@ -47,25 +47,36 @@ load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-20
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_13-03-19"
 num = 40
 
-# 8.7基础上使用exp型reward设计
+# 8.7基础上使用exp型reward设计，可用
 load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_13-45-33"
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_13-45-33"
 num = 40
 
-# 9.修改网络层数，不可用
-# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_15-43-54"
-# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_15-43-54"
-# num = 250
+# 9.修改随机初始化姿态设定
+# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_09-22-55"
+# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_09-22-55"
+# num = 320
+
+# 10.8基础上修改reward和maxeplen
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_11-31-57"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_11-31-57"
+num = 80
+
+# 9.修改随机初始化姿态设定，修改角加速度滤波器系数
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_13-05-09"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_13-05-09"
+num = 140
+
 
 if __name__=="__main__":
-    model = SimpleUAVModel(ts=0.01, log=True)
+    model = SimpleUAVModel(ts=0.01, log=True, BW=5)
     ppo = PPO(None, None, None, False)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
     state = np.zeros(21)
     u = 2*np.ones(4)
     # u_list = [u for _ in range(int(model.delay_time/model.ts))]
-    for i in range(2000):
+    for i in range(1000):
         obs, acc, omega_dot_f = model.get_obs_rl()
 
         # u_list.append(u.copy())

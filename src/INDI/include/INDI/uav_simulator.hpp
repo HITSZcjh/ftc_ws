@@ -15,48 +15,46 @@
 #include <yaml-cpp/yaml.h>
 namespace QuadrotorEnv
 {
-    constexpr int NFLAG = 1;
+
     constexpr int NX = UAVMODEL_NX;
-    constexpr int NU = UAVMODEL_NU + NFLAG;
+    constexpr int NU = UAVMODEL_NU;
     constexpr int NP = UAVMODEL_NP;
     constexpr int NK = 4;
-    constexpr int Nobs = 21 + NFLAG;
+    constexpr int Nobs = 21;
     constexpr double u_range[2] = {0, 6};
-    constexpr double flag_range[2] = {0, 1};
-
     constexpr double delta_u_range[2] = {-50, 50};
     constexpr double mass_inv = 1 / 0.73;
     // constexpr double omega_range[2] = {-5, 5};
     // constexpr double velocity_range[2] = {-5, 5};
 
-    // constexpr double state_noise_std[QuadrotorEnv::NX] = {0.05, 0.05, 0.05,
-    //                                              0.5, 0.5, 0.5,
-    //                                              0.0, 0.0, 0.0, 0.0,
-    //                                              0.5, 0.5, 0.5,
-    //                                              0, 0, 0, 0};
-    // constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.02, 0.02, 0.02,
-    //                                              0.1, 0.1, 0.1,
-    //                                              0.017, 0.017, 0.017, 0.017,
-    //                                              0.1, 0.1, 0.1,
-    //                                              0,0,0,0,
-    //                                              0.1,
-    //                                              0.1,0.1,0.1,
-    //                                              };
-
-    constexpr double state_noise_std[QuadrotorEnv::NX] = {0.1, 0.1, 0.1,
-                                                 1, 1, 1,
-                                                 0.01, 0.01, 0.01, 0.01,
-                                                 1, 1, 1,
-                                                 2, 2, 2, 2};
-    constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.05, 0.05, 0.05,
-                                                 0.2, 0.2, 0.2,
-                                                 0.085, 0.085, 0.085, 0.085,
-                                                 0.2, 0.2, 0.2,
+    constexpr double state_noise_std[QuadrotorEnv::NX] = {0.05, 0.05, 0.05,
+                                                 0.5, 0.5, 0.5,
+                                                 0.0, 0.0, 0.0, 0.0,
+                                                 0.5, 0.5, 0.5,
+                                                 0, 0, 0, 0};
+    constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.02, 0.02, 0.02,
+                                                 0.1, 0.1, 0.1,
+                                                 0.017, 0.017, 0.017, 0.017,
+                                                 0.1, 0.1, 0.1,
                                                  0,0,0,0,
-                                                 0.2,
-                                                 0.2,0.2,0.2,
+                                                 0.1,
+                                                 0.1,0.1,0.1,
                                                  };
 
+    // constexpr double state_noise_std[QuadrotorEnv::NX] = {0.1, 0.1, 0.1,
+    //                                                       1, 1, 1,
+    //                                                       0.01, 0.01, 0.01, 0.01,
+    //                                                       1, 1, 1,
+    //                                                       2, 2, 2, 2};
+    // constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {
+    //     0.05,0.05,0.05,
+    //     0.2,0.2,0.2,
+    //     0.085,0.085,0.085,0.085,
+    //     0.2,0.2,0.2,
+    //     0,0,0,0,
+    //     0.2,
+    //     0.2,0.2,0.2,
+    // };
 
     class LPF_t
     {
@@ -67,9 +65,9 @@ namespace QuadrotorEnv
         Eigen::Matrix<double, -1, 1> output;
         LPF_t(double cutoff_freq, double ts, Eigen::Matrix<double, -1, 1> input) : cutoff_freq(cutoff_freq), ts(ts), last_output(input){};
         void calc(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
-                       Eigen::Ref<Eigen::Matrix<double, -1, 1>> output);
+                  Eigen::Ref<Eigen::Matrix<double, -1, 1>> output);
         void calc_derivative(Eigen::Ref<Eigen::Matrix<double, -1, 1>> input,
-                           Eigen::Ref<Eigen::Matrix<double, -1, 1>> output);
+                             Eigen::Ref<Eigen::Matrix<double, -1, 1>> output);
     };
 
     class Simulator
@@ -84,21 +82,23 @@ namespace QuadrotorEnv
         void get_obs(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs);
         void get_obs_with_noise(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs);
         void get_reward(double &reward);
-        void get_done(bool &done);
+        void get_done(bool &done, double &reward);
         void get_acc(double &acc);
         void reset();
         void test();
+        void set_k(int agent_id, Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> k);
+        void set_state(int agent_id, Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state,
+                       Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> obs);
         double x_data[NX];
-        double u_data[NU - NFLAG];
+        double u_data[NU];
         double p_data[NP];
         Eigen::Map<Eigen::Matrix<double, NX, 1>> x;
-        Eigen::Map<Eigen::Matrix<double, NU - NFLAG, 1>> u;
-        Eigen::Matrix<double, NU - NFLAG, 1> delta_u;
+        Eigen::Map<Eigen::Matrix<double, NU, 1>> u;
+        Eigen::Matrix<double, NU, 1> delta_u;
         Eigen::Map<Eigen::Matrix<double, NX, 1>> state_noise;
         Eigen::Matrix<double, Nobs, 1> obs_noise;
         Eigen::Map<Eigen::Matrix<double, NK, 1>> k;
         LPF_t omega_lpf;
-        LPF_t flag_lpf;
 
     private:
         void get_noise(const double *std, int num, Eigen::Ref<Eigen::VectorXd> noise);

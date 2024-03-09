@@ -52,4 +52,22 @@ namespace QuadrotorEnv
             envs_list[i]->get_obs(obs.row(i));
         }
     }
+
+    void VecEnv::set_k(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> k)
+    {
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < num_envs; i++)
+        {
+            envs_list[i]->set_k(i, k);
+        }
+    }
+
+    void VecEnv::set_state(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state, Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> obs)
+    {
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < num_envs; i++)
+        {
+            envs_list[i]->set_state(i, state, obs);
+        }
+    }
 }

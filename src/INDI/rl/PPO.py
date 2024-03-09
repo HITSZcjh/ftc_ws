@@ -18,7 +18,7 @@ class PPO:
         self.env = RLModel()
         self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3)
         self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3, 0.99)
-        self.batchsize = 1000000
+        self.batchsize = 1600000
         self.eval_bathsize = 100000
         self.replay_buffer = ReplayBuffer(max_size=self.batchsize)
         self.epochs = 50
@@ -121,9 +121,9 @@ class PPO:
 test = False
 
 load_model = True
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model06-03-2024_11-37-58"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model06-03-2024_11-37-58"
-num = 600
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_13-05-09"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_13-05-09"
+num = 100
 
 if __name__ == "__main__":
     if(test):

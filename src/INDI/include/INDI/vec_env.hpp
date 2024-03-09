@@ -6,7 +6,7 @@
 
 namespace QuadrotorEnv
 {
-    
+
     class VecEnv
     {
     public:
@@ -20,6 +20,11 @@ namespace QuadrotorEnv
         inline int get_num_envs() { return num_envs; }
         inline int get_obs_dim() { return Nobs; }
         inline int get_action_dim() { return NU; }
+        inline int get_state_dim() { return NX; }
+        void set_k(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> k);
+        void set_state(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state,
+                       Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> obs);
+
     private:
         YAML::Node cfg;
         int num_envs;
