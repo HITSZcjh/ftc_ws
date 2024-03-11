@@ -24,6 +24,7 @@ namespace QuadrotorEnv
         void set_k(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> k);
         void set_state(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state,
                        Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> obs);
+        void get_state(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state);
 
     private:
         YAML::Node cfg;

@@ -62,11 +62,15 @@ load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-20
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_11-31-57"
 num = 80
 
-# 9.修改随机初始化姿态设定，修改角加速度滤波器系数
+# 11.修改随机初始化姿态设定，修改角加速度滤波器系数
 load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_13-05-09"
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_13-05-09"
 num = 140
 
+# *.测试
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model09-03-2024_10-21-44"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model09-03-2024_10-21-44"
+num = 140
 
 if __name__=="__main__":
     model = SimpleUAVModel(ts=0.01, log=True, BW=5)

@@ -17,5 +17,6 @@ PYBIND11_MODULE(QuadrotorEnv, m) {
         .def("get_state_dim", &VecEnv::get_state_dim)
         .def("reset", &VecEnv::reset)
         .def("set_k", &VecEnv::set_k)
-        .def("set_state", &VecEnv::set_state);
+        .def("set_state", &VecEnv::set_state)
+        .def("get_state", &VecEnv::get_state);
 }

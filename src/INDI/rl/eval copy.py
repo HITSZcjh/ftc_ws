@@ -1,9 +1,8 @@
 import sys
 sys.path.append("/home/jiao/ftc_ws")
-from src.INDI.rl.rl_model import RLModel
+from src.INDI.scripts.uav_model import SimpleUAVModel
 from PPO import PPO
 import numpy as np
-import matplotlib.pyplot as plt
 
 # load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model21-02-2024_22-02-02"
 # load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model21-02-2024_22-02-02"
@@ -38,56 +37,68 @@ load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model04-03-20
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model04-03-2024_22-16-05"
 num = 280
 
-# # 6.5基础上使用exp型reward设计，且增大训练步数2000
-# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_10-40-07"
-# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_10-40-07"
-# num = 0
+# 6.5基础上使用exp型reward设计，且增大训练步数2000
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_10-40-07"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_10-40-07"
+num = 0
 
 # 7.5基础上调整样本的概率，且增大训练步数2000
 load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_13-03-19"
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_13-03-19"
-num = 60
+num = 40
 
-# # 8.7基础上使用exp型reward设计，可用
+# 8.7基础上使用exp型reward设计，可用
 load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_13-45-33"
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_13-45-33"
-num = 30
+num = 40
 
-# 9.修改网络层数，不可用
-# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model05-03-2024_15-43-54"
-# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model05-03-2024_15-43-54"
-# num = 250
+# 9.修改随机初始化姿态设定
+# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_09-22-55"
+# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_09-22-55"
+# num = 320
+
+# 10.8基础上修改reward和maxeplen
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_11-31-57"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_11-31-57"
+num = 80
+
+# 9.修改随机初始化姿态设定，修改角加速度滤波器系数
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_13-05-09"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_13-05-09"
+num = 140
+
+# *.测试
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model09-03-2024_10-21-44"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model09-03-2024_10-21-44"
+num = 150
 
 if __name__=="__main__":
-    model = RLModel(log=True)
-    ppo = PPO(None, None, None, True)
+    model = SimpleUAVModel(ts=0.01, log=True, BW=5)
+    ppo = PPO(None, None, None, False)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
-    state = model.set_state()
-    
-    num = int(model.num_envs / 4)
-    k = np.linspace(0, 1, num)
-    model.k[:num,0] = k
-    model.k[num:num*2,1] = k
-    model.k[num*2:num*3,2] = k
-    model.k[num*3:num*4,3] = k
-    model.set_k()
-    dones = []
-    for i in range(1001):
-        action = ppo.actor.get_action_without_sample(state)
-        state, reward, done = model.step(action)
-        dones.append(done)
+    state = np.zeros(21)
+    u = 2*np.ones(4)
+    # u_list = [u for _ in range(int(model.delay_time/model.ts))]
+    for i in range(1000):
+        obs, acc, omega_dot_f = model.get_obs_rl()
 
-    dones = np.array(dones)
-    live_list = []
-    for i in range(model.num_envs):
-        first_true_index = np.where(dones[:,i] == True)[0][0]
-        live_list.append(first_true_index)
-    
-    live_list = np.array(live_list)
+        # u_list.append(u.copy())
+        # u = u_list.pop(0)
 
-    
-    plt.plot(live_list)
+        state[:13] = obs
+        state[13:17] = u # u_list.pop(0)
+        state[17] = acc
+        state[18:21] = omega_dot_f
+
+        u = ppo.actor.get_action_without_sample(state)
+        u = u[0]
+
+        u = (u+1)*3
+        u = np.clip(u, 0, 6)
+        model.k = np.array([1,1,1,1])
+        model.step(u)
+
 
     # state = model.state
     # for i in range(500):

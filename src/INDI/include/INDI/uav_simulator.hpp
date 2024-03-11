@@ -15,15 +15,16 @@
 #include <yaml-cpp/yaml.h>
 namespace QuadrotorEnv
 {
-
+    constexpr int obs_list_num = 1;
+    constexpr int singal_obs_num = 21;
     constexpr int NX = UAVMODEL_NX;
     constexpr int NU = UAVMODEL_NU;
     constexpr int NP = UAVMODEL_NP;
     constexpr int NK = 4;
-    constexpr int Nobs = 21;
+    constexpr int Nobs = singal_obs_num * obs_list_num;
     constexpr double u_range[2] = {0, 6};
-    constexpr double delta_u_range[2] = {-50, 50};
     constexpr double mass_inv = 1 / 0.73;
+    constexpr int max_failed_k_list_size = 1000;
     // constexpr double omega_range[2] = {-5, 5};
     // constexpr double velocity_range[2] = {-5, 5};
 
@@ -32,7 +33,7 @@ namespace QuadrotorEnv
                                                  0.0, 0.0, 0.0, 0.0,
                                                  0.5, 0.5, 0.5,
                                                  0, 0, 0, 0};
-    constexpr double obs_noise_std[QuadrotorEnv::Nobs] = {0.02, 0.02, 0.02,
+    constexpr double obs_noise_std[QuadrotorEnv::singal_obs_num] = {0.02, 0.02, 0.02,
                                                  0.1, 0.1, 0.1,
                                                  0.017, 0.017, 0.017, 0.017,
                                                  0.1, 0.1, 0.1,
@@ -84,20 +85,25 @@ namespace QuadrotorEnv
         void get_reward(double &reward);
         void get_done(bool &done, double &reward);
         void get_acc(double &acc);
-        void reset();
+        void reset(Eigen::Ref<Eigen::Matrix<double, -1, 1>> obs);
         void test();
         void set_k(int agent_id, Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> k);
         void set_state(int agent_id, Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state,
                        Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> obs);
+        void get_state(int agent_id, Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state);
         double x_data[NX];
         double u_data[NU];
         double p_data[NP];
         Eigen::Map<Eigen::Matrix<double, NX, 1>> x;
         Eigen::Map<Eigen::Matrix<double, NU, 1>> u;
-        Eigen::Matrix<double, NU, 1> delta_u;
         Eigen::Map<Eigen::Matrix<double, NX, 1>> state_noise;
-        Eigen::Matrix<double, Nobs, 1> obs_noise;
+        Eigen::Matrix<double, singal_obs_num, 1> obs_noise;
+        Eigen::Matrix<double, singal_obs_num, 1> obs_normalized_max;
+
         Eigen::Map<Eigen::Matrix<double, NK, 1>> k;
+        std::deque<Eigen::Matrix<double, NK, 1>> failed_k_list;
+        int failed_k_index;
+        int failed_repeat;
         LPF_t omega_lpf;
 
     private:

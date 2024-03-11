@@ -48,9 +48,14 @@ namespace QuadrotorEnv
         #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < num_envs; i++)
         {
-            envs_list[i]->reset();
-            envs_list[i]->get_obs(obs.row(i));
+            envs_list[i]->reset(obs.row(i));
         }
+        int failed_k_list_size = 0;
+        for(int i=0;i<num_envs;i++)
+        {
+            failed_k_list_size+=envs_list[i]->failed_k_list.size();
+        }
+        std::cout<<"failed_k_list_size:"<<failed_k_list_size<<std::endl;
     }
 
     void VecEnv::set_k(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> k)
@@ -68,6 +73,15 @@ namespace QuadrotorEnv
         for (int i = 0; i < num_envs; i++)
         {
             envs_list[i]->set_state(i, state, obs);
+        }
+    }
+
+    void VecEnv::get_state(Eigen::Ref<Eigen::Matrix<double, -1, -1, 1>> state)
+    {
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < num_envs; i++)
+        {
+            envs_list[i]->get_state(i, state);
         }
     }
 }

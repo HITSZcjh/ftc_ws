@@ -16,12 +16,12 @@ class PPO:
     def __init__(self, logdir, save_actor_model_path, save_critic_model_path, use_gpu) -> None:
         ptu.init_gpu(use_gpu=use_gpu)
         self.env = RLModel()
-        self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3)
-        self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 5e-3, 0.99)
+        self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, 1e-3)
+        self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, 1e-3, 0.99)
         self.batchsize = 1600000
         self.eval_bathsize = 100000
         self.replay_buffer = ReplayBuffer(max_size=self.batchsize)
-        self.epochs = 50
+        self.epochs = 10
         self.eps = 0.2
         self.n_iter = 1000
         self.logger = Logger(logdir)
@@ -121,9 +121,9 @@ class PPO:
 test = False
 
 load_model = True
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model08-03-2024_13-05-09"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-2024_13-05-09"
-num = 100
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-2024_00-21-05"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_00-21-05"
+num = 300
 
 if __name__ == "__main__":
     if(test):
