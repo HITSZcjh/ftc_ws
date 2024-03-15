@@ -26,12 +26,19 @@ load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model04-03-20
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model04-03-2024_22-16-05"
 num = 280
 
+# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-2024_13-00-32"
+# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_13-00-32"
+# num = 300
+
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-2024_16-07-23"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_16-07-23"
+num = 40
 if __name__=="__main__":
     rospy.init_node("UAV_RL_node", anonymous=True)
     ts = 0.01
     rate = rospy.Rate(1/ts)
-    model = RotorsUAVModel(ts=ts, delay_time=0.03 ,log=True)
-    ppo = PPO(None, None, None, False)
+    model = RotorsUAVModel(ts=ts, delay_time=0.03 ,log=True, BW=4)
+    ppo = PPO(None, None, None, True)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
     state = np.zeros(21)
@@ -44,16 +51,17 @@ if __name__=="__main__":
         state[13:17] = u
         state[17] = acc
         state[18:21] = omega_dot_f
+        state /= np.array((5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30, 6, 6, 6, 6, 35, 30, 30, 30))
 
-        du = ppo.actor.get_action_without_sample(state)
-        du = du[0]
+        u = ppo.actor.get_action_without_sample(state)
+        u = u[0]
 
-        du = np.clip(du,-1,1)
-        u += 50*du*model.ts
-        model.k = np.array([1,1,1,0])
-        u[3] = 0
-        model.step(u)
+        u = (u+1)*3
         u = np.clip(u, 0, 6)
+
+        model.k = np.array([1,1,1,1])
+        # u[2] = 0
+        model.step(u)
         rate.sleep()
         end_time = time.perf_counter()
         print("time: ", end_time-start_time)

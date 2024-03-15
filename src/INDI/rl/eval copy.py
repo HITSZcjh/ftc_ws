@@ -68,12 +68,13 @@ load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-
 num = 140
 
 # *.测试
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model09-03-2024_10-21-44"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model09-03-2024_10-21-44"
-num = 150
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-2024_16-07-23"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_16-07-23"
+num = 40
+
 
 if __name__=="__main__":
-    model = SimpleUAVModel(ts=0.01, log=True, BW=5)
+    model = SimpleUAVModel(ts=0.01, log=True, BW=4)
     ppo = PPO(None, None, None, False)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
@@ -90,13 +91,13 @@ if __name__=="__main__":
         state[13:17] = u # u_list.pop(0)
         state[17] = acc
         state[18:21] = omega_dot_f
-
+        state /= np.array((5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30, 6, 6, 6, 6, 35, 30, 30, 30))
         u = ppo.actor.get_action_without_sample(state)
         u = u[0]
 
         u = (u+1)*3
         u = np.clip(u, 0, 6)
-        model.k = np.array([1,1,1,1])
+        model.k = np.array([1,1,1,0])
         model.step(u)
 
 

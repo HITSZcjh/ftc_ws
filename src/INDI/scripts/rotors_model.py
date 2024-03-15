@@ -31,7 +31,7 @@ class LPF(object):
         return output, derivative
 
 class RotorsUAVModel(object):
-    def __init__(self, ts, delay_time=None, log=False) -> None:
+    def __init__(self, ts, delay_time=None, log=False, BW=4) -> None:
         self.rotor_drag_coeff = 0.016  
         self.rotor_thrust_coeff = 8.54858e-06
         self.body_length = 0.17
@@ -91,7 +91,7 @@ class RotorsUAVModel(object):
         if self.log:
             self.log_state_list = []
         
-        self.omega_lpf = LPF(self.ts, 50, np.zeros(3))
+        self.omega_lpf = LPF(self.ts, BW, np.zeros(3))
 
     def get_obs(self, rl=False):
         p = np.array([self.odometry_msg.pose.pose.position.x, self.odometry_msg.pose.pose.position.y, self.odometry_msg.pose.pose.position.z])

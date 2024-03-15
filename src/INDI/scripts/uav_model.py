@@ -333,7 +333,7 @@ class SimpleUAVModel(object):
             self.axs = self.fig.add_subplot(111, projection='3d')
             self.axs.set_xlim(-5,5)
             self.axs.set_ylim(-5,5)
-            self.axs.set_zlim(0,4)
+            self.axs.set_zlim(0,6)
             self.arrow_length = 1.0
             self.log_R_list = []
             for i in range(self.log_state_list.shape[0]):
@@ -355,6 +355,9 @@ class SimpleUAVModel(object):
             
             ani = FuncAnimation(self.fig, self.update, 
                                 frames=self.log_R_list.shape[0], interval=10, repeat=True)
+            writer = FFMpegWriter(fps=100, metadata=dict(artist='Me'), bitrate=1800)
+            path_prefix = os.path.dirname(os.path.realpath(__file__))+"/data/"
+            ani.save(path_prefix+"output.mp4", writer=writer)
             plt.show()
 
 

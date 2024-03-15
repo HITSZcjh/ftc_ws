@@ -21,6 +21,8 @@ class RLModel:
         self.log = log
         if log:
             self.obs_list = [[],[],[],[],[]]
+            self.pos_err = np.zeros([self.num_envs])
+            self.pos_goal = np.array([0,0,3])
         self.ts = ts
 
     def reset(self):
@@ -39,6 +41,9 @@ class RLModel:
             self.obs_list[2].append(log_temp[int(self.num_envs/2),:].copy())
             self.obs_list[3].append(log_temp[int(self.num_envs*3/4),:].copy())
             self.obs_list[4].append(log_temp[self.num_envs-1,:].copy())
+
+            pos = self._observation[:,0:3]*np.array((5, 5, 5))
+            self.pos_err += np.linalg.norm(pos - self.pos_goal, axis=1) 
         return self._observation.copy().astype(np.float32), self._reward.copy().astype(np.float32), self._done.copy().astype(np.float32)
     
     def set_k(self):
@@ -59,6 +64,26 @@ class RLModel:
             self.obs_list[:,:,:13] = self.obs_list[:,:,:13]*np.array((5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30))
             self.obs_list = self.obs_list[:,:-1,:]
             t = np.linspace(0, self.obs_list.shape[1]*self.ts, self.obs_list.shape[1])
+
+            self.pos_err /= self.obs_list.shape[1]
+            self.fig, self.axs = plt.subplots(2, 2)
+            k = np.linspace(0, 1, int(self.num_envs/4))
+            self.axs[0,0].plot(k, self.pos_err[:int(self.num_envs/4)], label="k1")
+            self.axs[0,0].set_ylim(0, 2)
+            self.axs[0,0].legend()
+            # self.axs[0,0].set_ylabel("pos_err")
+            self.axs[0,1].plot(k, self.pos_err[int(self.num_envs/4):int(self.num_envs/2)], label="k2")
+            self.axs[0,1].set_ylim(0, 2)
+            # self.axs[0,1].set_ylabel("pos_err")
+            self.axs[0,1].legend()
+            self.axs[1,0].plot(k, self.pos_err[int(self.num_envs/2):int(self.num_envs*3/4)], label="k3")
+            self.axs[1,0].set_ylim(0, 2)
+            # self.axs[1,0].set_ylabel("pos_err")
+            self.axs[1,0].legend()
+            self.axs[1,1].plot(k, self.pos_err[int(self.num_envs*3/4):], label="k4")
+            self.axs[1,1].set_ylim(0, 2)
+            # self.axs[1,1].set_ylabel("pos_err")
+            self.axs[1,1].legend()
 
             for i in range(5):
                 self.fig, self.axs = plt.subplots(2, 3)
