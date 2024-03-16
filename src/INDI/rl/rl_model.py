@@ -18,6 +18,11 @@ class RLModel:
         self.state[:,2] = 3
         self.state[:,6] = 1
 
+
+        self.rewards = [[] for _ in range(self.num_envs)]
+        self.epreturn = []
+        self.eplen = []
+
         self.log = log
         if log:
             self.obs_list = [[],[],[],[],[]]
@@ -25,6 +30,8 @@ class RLModel:
             self.pos_goal = np.array([0,0,3])
         self.ts = ts
 
+        self.reset()
+    
     def reset(self):
         self.env.reset(self._observation)
         return self._observation.copy().astype(np.float32)
@@ -34,6 +41,15 @@ class RLModel:
         action = (action+1)*3
         action = action.astype(np.float64)
         self.env.step(action, self._observation, self._reward, self._done)
+
+        for i in range(self.num_envs):
+            self.rewards[i].append(self._reward[i])
+            if self._done[i]:
+                self.epreturn.append(sum(self.rewards[i]))
+                self.eplen.append(len(self.rewards[i]))
+                self.rewards[i] = []
+
+
         if self.log:
             log_temp = np.hstack((self._observation[:,:13], np.clip(action, 0, 6))).astype(np.float32)
             self.obs_list[0].append(log_temp[0,:].copy())
@@ -56,6 +72,9 @@ class RLModel:
     def get_state(self):
         self.env.get_state(self.state)
         return self.state.copy().astype(np.float32)
+
+    def get_obs(self):
+        return self._observation.copy().astype(np.float32)
 
     def log_show(self):
         if self.log:

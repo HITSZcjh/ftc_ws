@@ -260,19 +260,19 @@ namespace QuadrotorEnv
 
     void Simulator::get_reward(double &reward)
     {
-        double pos_reward = pos_coeff * exp(-(x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm());
-        double lin_vel_reward = lin_vel_coeff * exp(-(x.segment(3, 3)).squaredNorm());
-        double ori_reward = ori_coeff * exp(-(x.segment(7, 2)).squaredNorm());
-        double ang_vel_reward = ang_vel_coeff * exp(-(x.segment(10, 2)).squaredNorm());
-        double act_reward = act_coeff * exp(-u.squaredNorm());
-        reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward;
+        // double pos_reward = pos_coeff * exp(-(x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm());
+        // double lin_vel_reward = lin_vel_coeff * exp(-(x.segment(3, 3)).squaredNorm());
+        // double ori_reward = ori_coeff * exp(-(x.segment(7, 2)).squaredNorm());
+        // double ang_vel_reward = ang_vel_coeff * exp(-(x.segment(10, 2)).squaredNorm());
+        // double act_reward = act_coeff * exp(-u.squaredNorm());
+        // reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward;
 
-        // double pos_reward = pos_coeff * (x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm();
-        // double lin_vel_reward = lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
-        // double ori_reward = ori_coeff * (x.segment(7, 2)).squaredNorm();
-        // double ang_vel_reward = ang_vel_coeff * (x.segment(10, 2)).squaredNorm();
-        // double act_reward = act_coeff * u.squaredNorm();
-        // reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward + 10.0;
+        double pos_reward = pos_coeff * (x.segment(0, 3) - goal_state.segment(0, 3)).squaredNorm();
+        double lin_vel_reward = lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
+        double ori_reward = ori_coeff * (x.segment(7, 2)).squaredNorm();
+        double ang_vel_reward = ang_vel_coeff * (x.segment(10, 2)).squaredNorm();
+        double act_reward = act_coeff * u.squaredNorm();
+        reward = pos_reward + lin_vel_reward + ori_reward + ang_vel_reward + act_reward + 10.0;
 
         // if(cnt == max_ep_len)
         //     reward += 10;

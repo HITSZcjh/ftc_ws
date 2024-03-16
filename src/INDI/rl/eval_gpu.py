@@ -62,9 +62,13 @@ load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-20
 load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_13-00-32"
 num = 300
 
-# load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-2024_16-07-23"
-# load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_16-07-23"
-# num = 40
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model16-03-2024_13-36-33"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model16-03-2024_13-36-33"
+num = 350
+
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-2024_00-21-05"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_00-21-05"
+num = 300
 
 if __name__=="__main__":
     model = RLModel(log=True)

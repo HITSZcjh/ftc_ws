@@ -68,13 +68,13 @@ load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model08-03-
 num = 140
 
 # *.测试
-load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model11-03-2024_16-07-23"
-load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model11-03-2024_16-07-23"
-num = 40
+load_actor_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/actor_model16-03-2024_12-57-35"
+load_critic_model_path = "/home/jiao/ftc_ws/src/INDI/rl/model/critic_model16-03-2024_12-57-35"
+num = 180
 
 
 if __name__=="__main__":
-    model = SimpleUAVModel(ts=0.01, log=True, BW=4)
+    model = SimpleUAVModel(ts=0.02, log=True, BW=4)
     ppo = PPO(None, None, None, False)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
@@ -97,7 +97,7 @@ if __name__=="__main__":
 
         u = (u+1)*3
         u = np.clip(u, 0, 6)
-        model.k = np.array([1,1,1,0])
+        model.k = np.array([1,1,1,0.3])
         model.step(u)
 
 

@@ -116,6 +116,24 @@ def sample_n_trajectories(env, policy, ntraj):
 
     return paths
 
+def run_steps(env, policy, num_steps):
+    state = env.get_obs()
+    states, actions, rewards, next_states, dones = [], [], [], [], []
+    for _ in range(num_steps):
+        states.append(state)
+        action = policy.get_action(state)
+        actions.append(action)
+        state, reward, done = env.step(action)
+        next_states.append(state)
+        rewards.append(reward)
+        dones.append(done)
+    states = np.array(states)
+    actions = np.array(actions)
+    rewards = np.array(rewards)
+    next_states = np.array(next_states)
+    dones = np.array(dones)
+    return states, actions, rewards, next_states, dones
+
 def convert_listofrollouts(paths):
     """
         Take a list of rollout dictionaries

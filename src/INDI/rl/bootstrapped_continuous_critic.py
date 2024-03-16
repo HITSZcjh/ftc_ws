@@ -36,7 +36,7 @@ class BootstrappedContinuousCritic(nn.Module):
         self.critic_network.to(ptu.device)
         self.loss = nn.MSELoss()
         self.optimizer = optim.Adam(
-            self.critic_network.parameters(),
+            self.parameters(),
             learning_rate,
         )
 
@@ -86,6 +86,7 @@ class BootstrappedContinuousCritic(nn.Module):
 
         targets = None
 
+
         for i in range(self.num_grad_steps_per_target_update * self.num_target_updates):
             if i % self.num_grad_steps_per_target_update == 0:
                 value_s_prime = self.forward_np(next_states)
@@ -99,29 +100,27 @@ class BootstrappedContinuousCritic(nn.Module):
 
             self.optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.parameters(), 1.0)
             self.optimizer.step()
 
         return loss.item()
 
-    def estimate_advantage(self, states:np.ndarray, rewards:np.ndarray, dones:np.ndarray):
-        values = self.forward_np(states)
-        values = np.append(values, [0])
-        batch_size = states.shape[0]
-        advantages = np.zeros(batch_size + 1)
+    def estimate_advantage(self, states:np.ndarray, next_states:np.ndarray, rewards:np.ndarray, dones:np.ndarray):
+        values = self.forward_np(states)[:,:,0]
+        last_value = self.forward_np(next_states[-1])
+        n_step = states.shape[0]
+        # env_num = states.shape[1]
+        advantages = np.zeros_like(rewards)
 
-        for i in reversed(range(batch_size)):
-            ## TODO: recursively compute advantage estimates starting from
-                ## timestep T.
-            ## HINT: use terminals to handle edge cases. terminals[i]
-                ## is 1 if the state is the last in its trajectory, and
-                ## 0 otherwise.
-            if dones[i]:
-                delta = rewards[i]
-                advantages[i] = delta
+        advantage = 0
+        for i in reversed(range(n_step)):
+            if i == n_step - 1:
+                next_value = last_value
             else:
-                delta = rewards[i] + self.gamma * values[i+1] - values[i]
-                advantages[i] = delta + advantages[i+1] * self.gae_lambda * self.gamma
+                next_value = values[i+1]
+            next_is_not_terminal = 1 - dones[i]
+            delta = rewards[i] + self.gamma * next_value * next_is_not_terminal - values[i]
+            advantages[i] = advantage = delta + self.gamma * self.gae_lambda * next_is_not_terminal * advantage
         # remove dummy advantage
-        advantages = advantages[:-1]
         advantages = utils.normalize(advantages,np.mean(advantages),np.std(advantages))
         return advantages

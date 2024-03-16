@@ -21,8 +21,9 @@ class MLPPolicy(nn.Module):
         )
         self.mean_net.to(ptu.device)
         self.logstd.to(ptu.device)
+        # self.parameter = itertools.chain([self.logstd], self.mean_net.parameters())
         self.optimizer = optim.Adam(
-            itertools.chain([self.logstd], self.mean_net.parameters()),
+            self.parameters(),
             learning_rate
         )
 
@@ -56,8 +57,15 @@ class MLPPolicy(nn.Module):
         scale_tril = torch.diag(torch.exp(self.logstd))
         batch_dim = batch_mean.shape[0]
         batch_scale_tril = scale_tril.repeat(batch_dim, 1, 1)
+        # print(self.logstd)
         action_distribution = distributions.MultivariateNormal(
             batch_mean,
             scale_tril=batch_scale_tril,
         )
         return action_distribution
+
+
+
+        # batch_dim = batch_mean.shape[0]
+        # batch_scale_tril = scale_tril.repeat(batch_dim, 1, 1)
+
