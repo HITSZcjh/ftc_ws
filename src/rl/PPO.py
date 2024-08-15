@@ -44,12 +44,13 @@ class PPO:
         self.actor.load_state_dict(torch.load(load_actor_model_path+'/%d.pt' %num))
         self.critic.load_state_dict(torch.load(load_critic_model_path+'/%d.pt' %num))
 
-    def actor_update(self, states:np.ndarray, actions:np.ndarray, advantages):
-        old_action_distr = self.actor.forward(ptu.from_numpy(states))
-        old_log_probs = old_action_distr.log_prob(ptu.from_numpy(actions)).detach()
-
-        old_sigma_batch = old_action_distr.stddev
-        old_mu_batch = old_action_distr.mean
+    def actor_update(self, states:np.ndarray, actions:np.ndarray, advantages, old_log_probs, old_sigma, old_mu):
+        old_log_probs = old_log_probs.reshape(-1)
+        old_sigma = old_sigma.reshape(-1, self.env.action_dim)
+        old_mu = old_mu.reshape(-1, self.env.action_dim)
+        old_log_probs = ptu.from_numpy(old_log_probs)
+        old_sigma = ptu.from_numpy(old_sigma)
+        old_mu = ptu.from_numpy(old_mu)
 
         for _ in range(self.epochs):
 
@@ -62,8 +63,8 @@ class PPO:
 
                 with torch.inference_mode():
                     kl = torch.sum(
-                        torch.log(sigma_batch / old_sigma_batch + 1.0e-5)
-                        + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch))
+                        torch.log(sigma_batch / old_sigma + 1.0e-5)
+                        + (torch.square(old_sigma) + torch.square(old_mu - mu_batch))
                         / (2.0 * torch.square(sigma_batch))
                         - 0.5,
                         axis=-1,
@@ -97,8 +98,10 @@ class PPO:
 
         return ppo_loss
 
-    def update(self, states, actions, rewards, next_states, dones):
+    def update(self, states, actions, rewards, next_states, dones, old_log_probs, old_sigma, old_mu):
+        # 948
         advantages = self.critic.estimate_advantage(states, next_states, rewards, dones)
+        # 2522
         advantages = advantages.reshape(-1)
 
         states = states.reshape(-1, self.env.state_dim)
@@ -106,6 +109,10 @@ class PPO:
         actions = actions.reshape(-1, self.env.action_dim)
         rewards = rewards.reshape(-1)
         dones = dones.reshape(-1)
+        old_log_probs = old_log_probs.reshape(-1)
+        old_sigma = old_sigma.reshape(-1, self.env.action_dim)
+        old_mu = old_mu.reshape(-1, self.env.action_dim)
+
 
         states = ptu.from_numpy(states)
         next_states = ptu.from_numpy(next_states)
@@ -113,10 +120,10 @@ class PPO:
         advantages = ptu.from_numpy(advantages)
         dones = ptu.from_numpy(dones)
         rewards = ptu.from_numpy(rewards)
-        old_action_distr = self.actor.forward(states)
-        old_log_probs = old_action_distr.log_prob(actions).detach()
-        old_sigma = old_action_distr.stddev
-        old_mu = old_action_distr.mean
+        old_log_probs = ptu.from_numpy(old_log_probs)
+        old_sigma = ptu.from_numpy(old_sigma)
+        old_mu = ptu.from_numpy(old_mu)
+
 
         mini_batch_size = self.batchsize // self.num_mini_batches
         indices = torch.randperm(self.num_mini_batches * mini_batch_size, requires_grad=False, device=ptu.device)
@@ -126,13 +133,14 @@ class PPO:
                 ind = indices[i * mini_batch_size : (i + 1) * mini_batch_size]
                 states_batch = states[ind]
                 action_batch = actions[ind]
-                advantage_batch = advantages[ind]
                 old_log_probs_batch = old_log_probs[ind]
                 old_sigma_batch = old_sigma[ind]
                 old_mu_batch = old_mu[ind]
                 next_states_batch = next_states[ind]
                 dones_batch = dones[ind]
                 rewards_batch = rewards[ind]
+
+                advantage_batch = advantages[ind]
 
                 action_distr = self.actor.forward(states_batch)
                 log_probs = action_distr.log_prob(action_batch)
@@ -251,11 +259,12 @@ class PPO:
             # self.replay_buffer.add_rollouts(path)
             # states, actions, rewards, next_states, dones = self.replay_buffer.sample_recent_data(self.batchsize)
             # 578
-            states, actions, rewards, next_states, dones = run_steps(self.env, self.actor, self.n_step)
+            states, actions, rewards, next_states, dones, log_probs, stds, means = run_steps(self.env, self.actor, self.n_step)
+            
             # 948
             print("Training model...\n")
             
-            # actor_loss, critic_loss = self.update(states, actions, rewards, next_states, dones)
+            # actor_loss, critic_loss = self.update(states, actions, rewards, next_states, dones, log_probs, stds, means)
             # loss = {"critic_loss":critic_loss, "actor_loss":actor_loss}
 
             advantages = self.critic.estimate_advantage(states, next_states, rewards, dones) 
@@ -270,7 +279,7 @@ class PPO:
             dones = dones.reshape(-1)
             critic_loss = self.critic.update(states, next_states, rewards, dones)
             # 3020
-            actor_loss = self.actor_update(states, actions, advantages)
+            actor_loss = self.actor_update(states, actions, advantages, log_probs, stds, means)
             # 4494
             loss = {"critic_loss":critic_loss, "actor_loss":actor_loss}
 
