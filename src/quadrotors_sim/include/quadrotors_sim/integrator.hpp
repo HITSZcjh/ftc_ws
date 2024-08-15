@@ -6,6 +6,8 @@
 namespace quadrotors
 {
     constexpr Scalar rk_max_dt = 2.5e-3;
+    constexpr Scalar lpf_tau_inv = 1/0.04;
+
     class Integrator
     {
     public:
@@ -38,12 +40,15 @@ namespace quadrotors
 
             for (int i = 0; i < NTHRUSTS; i++)
             {
-                Scalar dot = quad_param.k(i) * u(i) - x(i + THRUSTS_REAL);
+                Scalar dot = quad_param.k(i) * x(i + U_LPF) - x(i + THRUSTS_REAL);
                 if (dot)
                     x_dot(i + THRUSTS_REAL) = quad_param.rotor_time_constant_up_inv * dot;
                 else
                     x_dot(i + THRUSTS_REAL) = quad_param.rotor_time_constant_down_inv * dot;
             }
+
+            x_dot.segment<NU>(U_LPF) = lpf_tau_inv * (u - x.segment<NU>(U_LPF));
+
             x_dot += ode_func_noise;
             return x_dot;
         }
@@ -73,7 +78,6 @@ namespace quadrotors
 
         Vector<3> get_acc(const Vector<NX> &x, const QuadParam &quad_param)
         {
-
             Vector<4> torques_force = quad_param.alloc_mat * x.segment<NTHRUSTS>(THRUSTS_REAL);
             Vector<3> total_force(0, 0, torques_force(3));
             Vector<3> vel_drag = -quad_param.vel_drag_factor * x.segment<NV>(V);

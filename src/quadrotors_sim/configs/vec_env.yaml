@@ -1,6 +1,6 @@
 env:
   dt: 0.02
-  num_envs: 4000
+  num_envs: 400
   num_threads: 26
   delay_time: 0.00  
   add_noise: 1

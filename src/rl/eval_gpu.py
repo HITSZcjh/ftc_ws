@@ -137,17 +137,16 @@ num = 280
 
 
 #ADD LPF
-load_actor_model_path = "/home/jiao/test_ws/src/rl/model/actor_model10-08-2024_16-31-03"
-load_critic_model_path = "/home/jiao/test_ws/src/rl/model/critic_model10-08-2024_16-31-03"
-num = 610
-
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_11-59-43"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_11-59-43"
+num = 430
 if __name__=="__main__":
     model = RLModel(log=True)
     model.print_quad_param()
     model.reset()
     model.reset()
 
-    ppo = PPO(None, None, None, True)
+    ppo = PPO(None, None, None, False)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
     state = model.set_state()

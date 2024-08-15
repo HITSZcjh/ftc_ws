@@ -17,8 +17,8 @@ namespace quadrotors
                                             q(x.segment<NQ>(Q)),
                                             w(x.segment<NW>(W)),
                                             thrusts_real(x.segment<NTHRUSTS>(THRUSTS_REAL)),
+                                            u_lpf(x.segment<NU>(U_LPF)),
                                             hyper_param(cfg),
-                                            u_lpf(0.08, hyper_param.dt),
                                             omega_dot_lpf(0.12, hyper_param.dt)
     {
         // init
@@ -53,7 +53,6 @@ namespace quadrotors
                          VectorRef<Scalar> extra_infos)
     {
         u = actions.cwiseMax(thrust_range[0]).cwiseMin(thrust_range[1]);
-        u_lpf.calc(u,u);
         x = integrator.integrate(x, u, hyper_param.dt, quad_param, ode_func_noise);
         q = q / q.norm();
 
@@ -96,7 +95,7 @@ namespace quadrotors
 
     Scalar Simulator::calc_reward()
     {
-        extra_info["pos_reward"] = hyper_param.pos_coeff * (p - goal_state.segment<NP>(P)).squaredNorm();
+        extra_info["pos_reward"] = hyper_param.pos_coeff * (p - goal_pos).squaredNorm();
         extra_info["lin_vel_reward"] = hyper_param.lin_vel_coeff * v.squaredNorm();
         extra_info["ori_reward"] = hyper_param.ori_coeff * (q.segment<2>(0)).squaredNorm();
         Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
@@ -144,6 +143,10 @@ namespace quadrotors
         thrusts_real(1) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
         thrusts_real(2) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
         thrusts_real(3) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
+
+        thrusts_real.setZero();
+        u_lpf.setZero();
+
     }
 
     void Simulator::reset(VectorRef<Scalar> obs)
@@ -165,7 +168,6 @@ namespace quadrotors
         // quad_param.set_k((Vector<4>() << 0,1,1,1).finished());
 
         get_obs(obs);
-        u_lpf.last_output = Vector<4>::Zero();
 
         omega_dot_lpf.last_input = obs.segment<3>(10);
         omega_dot_lpf.last_output = Vector<3>::Zero();
@@ -184,7 +186,7 @@ namespace quadrotors
     {
         obs.setZero();
         obs.segment<13>(0) = x.segment<13>(0);
-        obs.segment<4>(13) = u;
+        obs.segment<4>(13) = x.segment<NU>(U_LPF);
         obs.segment<3>(17) = get_acc();
         get_noise_vector(obs_noise_std, obs_noise);
         obs += obs_noise;

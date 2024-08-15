@@ -34,7 +34,9 @@ namespace quadrotors
     };
 
     constexpr Scalar world_box[3][2] = {{-5, 5}, {-5, 5}, {0, 6}};
-    const Vector<NX> goal_state = (Vector<NX>() << 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).finished();
+    // const Vector<NX> goal_state = (Vector<NX>() << 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).finished();
+    const Vector<NP> goal_pos = (Vector<NP>() << 0, 0, 3).finished();
+
     const Vector<NOBS> obs_normalized_max = (Vector<NOBS>() << 5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30, thrust_range[1], thrust_range[1], thrust_range[1], thrust_range[1], 5, 5, 30, 30, 30, 30).finished();
 
     class Simulator;
@@ -83,7 +85,7 @@ namespace quadrotors
         VectorRef<Scalar, NQ> q;
         VectorRef<Scalar, NW> w;
         VectorRef<Scalar, NTHRUSTS> thrusts_real;
-
+        VectorRef<Scalar, NU> u_lpf;
         Vector<NX> ode_func_noise;
         Vector<NOBS> obs_noise;
         QuadParam quad_param;
@@ -98,7 +100,6 @@ namespace quadrotors
         void get_noise_vector(const Scalar *std, VectorRef<Scalar> noise);
 
         LPF_t omega_dot_lpf;
-        LPF_t u_lpf;
         bool first_reset;
         Scalar max_ep_len_copy;
     };

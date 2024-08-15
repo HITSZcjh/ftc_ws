@@ -209,7 +209,17 @@ class RLModel:
 if __name__ == '__main__':
 
     model = RLModel()
-    model.print_quad_param()
+    action = 0.5*np.ones((model.num_envs, model.action_dim),dtype=np.float32)
+    for i in range(10):
+        # action = -action
+        obs = model.step(action)[0][0]
+
+        state = model.get_state()[0]
+        # print("obs:", obs)
+        print("x:", state)
+
+
+    # model.print_quad_param()
 
 
     # num = int(model.num_envs / 4)

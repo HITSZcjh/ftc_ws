@@ -120,8 +120,10 @@ namespace quadrotors
         // thrusts_real
         THRUSTS_REAL = 13,
         NTHRUSTS = 4,
+        // u_lpf
+        U_LPF = 17,
         // SIZE
-        NX = 17,
+        NX = 21,
         NU = NTHRUSTS,
         NOBS = 23
     };
