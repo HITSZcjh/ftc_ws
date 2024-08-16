@@ -6,7 +6,7 @@
 namespace quadrotors
 {
     constexpr Scalar rk_max_dt = 2.5e-3;
-    constexpr Scalar lpf_tau_inv = 1/0.04;
+    constexpr Scalar lpf_tau_inv = 1/0.06;
 
     class Integrator
     {

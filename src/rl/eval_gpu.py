@@ -136,10 +136,24 @@ num = 280
 # num = 280
 
 
-#ADD LPF
+#ADD LPF with K
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_14-15-19"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_14-15-19"
+num = 410
+
 load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_11-59-43"
 load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_11-59-43"
-num = 430
+num = 1200
+
+#ADD LPF no K
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_17-51-31"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_17-51-31"
+num = 460
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_20-51-36"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_20-51-36"
+num = 660
+
 if __name__=="__main__":
     model = RLModel(log=True)
     model.print_quad_param()

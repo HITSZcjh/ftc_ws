@@ -39,6 +39,21 @@ load_actor_model_path = "/home/jiao/test_ws/src/rl/model/actor_model10-08-2024_1
 load_critic_model_path = "/home/jiao/test_ws/src/rl/model/critic_model10-08-2024_16-31-03"
 num = 610
 
+#ADD LPF with K
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_14-15-19"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_14-15-19"
+# num = 410
+
+#ADD LPF no K
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_17-51-31"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_17-51-31"
+num = 460
+
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_20-51-36"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_20-51-36"
+# num = 660
+
+
 if __name__=="__main__":
     rospy.init_node("UAV_RL_node", anonymous=None)
     ts = 0.0025
@@ -48,8 +63,8 @@ if __name__=="__main__":
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
 
     state = np.zeros(23)
-    u = 2*np.ones(4)
-    u_lpf = LPF(ts,1/0.08,np.zeros(4))
+    u = 0*np.ones(4)
+    u_lpf = LPF(ts,1/0.04,np.zeros(4))
     acc_list = []
     for i in range(5000):
         start_time = time.perf_counter()
@@ -65,7 +80,7 @@ if __name__=="__main__":
         state[20:23] = omega_dot_f
         state /= np.array((5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30, 6, 6, 6, 6, 5, 5, 30, 30, 30, 30))
         
-        model.k = np.array([1,1,1,1])
+        model.k = np.array([1,1,0,1])
         if not obs_with_k:
             u = ppo.actor.get_action_without_sample(state)
         else:

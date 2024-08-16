@@ -3,7 +3,7 @@ import numpy as np
 import sys
 np.set_printoptions(threshold=sys.maxsize, precision=3, suppress=True)
 
-obs_with_k = True
+obs_with_k = False
 
 class RLModel:
     def __init__(self, log=False, ts=0.02):

@@ -98,7 +98,8 @@ namespace quadrotors
         extra_info["pos_reward"] = hyper_param.pos_coeff * (p - goal_pos).squaredNorm();
         extra_info["lin_vel_reward"] = hyper_param.lin_vel_coeff * v.squaredNorm();
         extra_info["ori_reward"] = hyper_param.ori_coeff * (q.segment<2>(0)).squaredNorm();
-        Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
+        Scalar itr_discount = itr / (2.f / hyper_param.dt) < 1.f ? itr / (2.f / hyper_param.dt) : 1.f;
+        Scalar factor = pow(quad_param.get_k().sum() - 3, 12) * itr_discount;
         extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * ((w.segment<2>(0)).squaredNorm() + factor * w(2) * w(2));
         extra_info["act_reward"] = hyper_param.act_coeff * u.squaredNorm();
         reward = extra_info["pos_reward"] + extra_info["lin_vel_reward"] + extra_info["ori_reward"] +
@@ -146,7 +147,6 @@ namespace quadrotors
 
         thrusts_real.setZero();
         u_lpf.setZero();
-
     }
 
     void Simulator::reset(VectorRef<Scalar> obs)
