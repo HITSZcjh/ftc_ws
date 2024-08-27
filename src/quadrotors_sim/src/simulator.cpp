@@ -36,6 +36,11 @@ namespace quadrotors
         extra_info.emplace("act_reward", 0);
         extra_info.emplace("live_reward", 0.0);
 
+        extra_info.emplace("pos_err", 0);
+        extra_info.emplace("lin_vel_err", 0);
+        extra_info.emplace("ori_err", 0);
+        extra_info.emplace("ang_vel_err", 0);
+
         first_reset = true;
     }
 
@@ -95,13 +100,29 @@ namespace quadrotors
 
     Scalar Simulator::calc_reward()
     {
-        extra_info["pos_reward"] = hyper_param.pos_coeff * (p - goal_pos).squaredNorm();
-        extra_info["lin_vel_reward"] = hyper_param.lin_vel_coeff * v.squaredNorm();
-        extra_info["ori_reward"] = hyper_param.ori_coeff * (q.segment<2>(0)).squaredNorm();
-        Scalar itr_discount = itr / (2.f / hyper_param.dt) < 1.f ? itr / (2.f / hyper_param.dt) : 1.f;
-        Scalar factor = pow(quad_param.get_k().sum() - 3, 12) * itr_discount;
-        extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * ((w.segment<2>(0)).squaredNorm() + factor * w(2) * w(2));
+
+        Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
+        extra_info["pos_err"] = (p - goal_pos).squaredNorm();
+        extra_info["lin_vel_err"] = v.squaredNorm();
+        extra_info["ori_err"] = (q.segment<2>(0)).squaredNorm();
+        extra_info["ang_vel_err"] = (w.segment<2>(0)).squaredNorm() + factor * w(2) * w(2);
+
+        extra_info["pos_reward"] = hyper_param.pos_coeff * extra_info["pos_err"];
+        extra_info["lin_vel_reward"] = hyper_param.lin_vel_coeff * extra_info["lin_vel_err"];
+        extra_info["ori_reward"] = hyper_param.ori_coeff * extra_info["ori_err"];
+        // Scalar itr_discount = itr / (2.f / hyper_param.dt) < 1.f ? itr / (2.f / hyper_param.dt) : 1.f;
+        // itr_discount = 1;
+        // Scalar factor = pow(quad_param.get_k().sum() - 3, 12) * itr_discount;
+        extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * extra_info["ang_vel_err"];
         extra_info["act_reward"] = hyper_param.act_coeff * u.squaredNorm();
+
+        // extra_info["pos_reward"] = hyper_param.pos_coeff * exp(-(x.segment(0, 3) - goal_pos).squaredNorm()/30);
+        // extra_info["lin_vel_reward"] = -hyper_param.lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
+        // extra_info["ori_reward"] = -hyper_param.ori_coeff * (x.segment(7, 2)).squaredNorm();
+        // extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * ((w.segment<2>(0)).squaredNorm() + factor * w(2) * w(2));
+        // extra_info["act_reward"] = -hyper_param.act_coeff * u.squaredNorm();
+
+
         reward = extra_info["pos_reward"] + extra_info["lin_vel_reward"] + extra_info["ori_reward"] +
                  extra_info["ang_vel_reward"] + extra_info["act_reward"] + extra_info["live_reward"];
         total_reward += reward;
@@ -186,7 +207,8 @@ namespace quadrotors
     {
         obs.setZero();
         obs.segment<13>(0) = x.segment<13>(0);
-        obs.segment<4>(13) = x.segment<NU>(U_LPF);
+        // obs.segment<4>(13) = x.segment<NU>(U_LPF);
+        obs.segment<4>(13) = u;
         obs.segment<3>(17) = get_acc();
         get_noise_vector(obs_noise_std, obs_noise);
         obs += obs_noise;
