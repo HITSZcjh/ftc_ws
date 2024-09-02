@@ -21,14 +21,14 @@ class PPO:
         self.batchsize = self.n_step*self.env.num_envs
         self.eval_bathsize = 100000
         self.replay_buffer = ReplayBuffer(max_size=self.batchsize)
-        self.epochs = 25
+        self.epochs = 50
         self.num_mini_batches = 10
         self.eps = 0.2
         self.n_iter = 10000
         self.logger = Logger(logdir)
         self.actor = MLPPolicy(self.env.action_dim, self.env.state_dim, 2, 128, self.learning_rate)
         self.critic = BootstrappedContinuousCritic(self.env.action_dim, self.env.state_dim, 2, 128, self.learning_rate, gamma=0.99, 
-                                                   gae_lambda=0.99, num_target_updates=5, num_grad_steps_per_target_update=5)
+                                                   gae_lambda=0.99, num_target_updates=10, num_grad_steps_per_target_update=10)
 
         self.schedule = "adaptive"
         self.desired_kl = 0.01
@@ -322,7 +322,7 @@ if __name__ == "__main__":
         ppo.load_model(load_actor_model_path, load_critic_model_path, 360)
         ppo.eval_plot()
     else:
-        log_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './log_data5')
+        log_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './log_data6')
         if not (os.path.exists(log_data_path)):
             os.makedirs(log_data_path)
         logdir = "rl_model" + time.strftime("%d-%m-%Y_%H-%M-%S")

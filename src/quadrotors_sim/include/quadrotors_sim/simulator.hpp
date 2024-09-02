@@ -86,6 +86,8 @@ namespace quadrotors
         VectorRef<Scalar, NW> w;
         VectorRef<Scalar, NTHRUSTS> thrusts_real;
         VectorRef<Scalar, NU> u_lpf;
+        Vector<NU> last_u_lpf;
+
         Vector<NX> ode_func_noise;
         Vector<NOBS> obs_noise;
         QuadParam quad_param;

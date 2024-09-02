@@ -40,6 +40,7 @@ namespace quadrotors
         extra_info.emplace("lin_vel_err", 0);
         extra_info.emplace("ori_err", 0);
         extra_info.emplace("ang_vel_err", 0);
+        extra_info.emplace("act_err", 0);
 
         first_reset = true;
     }
@@ -77,7 +78,7 @@ namespace quadrotors
         rewards = calc_reward();
         dones = check_done();
         itr++;
-
+        last_u_lpf = u_lpf;
         if (dones)
             reset(obs);
         else
@@ -100,12 +101,18 @@ namespace quadrotors
 
     Scalar Simulator::calc_reward()
     {
-
-        Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
         extra_info["pos_err"] = (p - goal_pos).squaredNorm();
         extra_info["lin_vel_err"] = v.squaredNorm();
         extra_info["ori_err"] = (q.segment<2>(0)).squaredNorm();
+        Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
         extra_info["ang_vel_err"] = (w.segment<2>(0)).squaredNorm() + factor * w(2) * w(2);
+        Vector<> du = (u_lpf-last_u_lpf).cwiseAbs()/hyper_param.dt;
+        for(int i = 0;i<NU;i++)
+        {
+            if(du(i)<5)
+                du(i) = 0;
+        }
+        extra_info["act_err"] = du.sum();
 
         extra_info["pos_reward"] = hyper_param.pos_coeff * extra_info["pos_err"];
         extra_info["lin_vel_reward"] = hyper_param.lin_vel_coeff * extra_info["lin_vel_err"];
@@ -114,7 +121,8 @@ namespace quadrotors
         // itr_discount = 1;
         // Scalar factor = pow(quad_param.get_k().sum() - 3, 12) * itr_discount;
         extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * extra_info["ang_vel_err"];
-        extra_info["act_reward"] = hyper_param.act_coeff * u.squaredNorm();
+
+        extra_info["act_reward"] = hyper_param.act_coeff * extra_info["act_err"];
 
         // extra_info["pos_reward"] = hyper_param.pos_coeff * exp(-(x.segment(0, 3) - goal_pos).squaredNorm()/30);
         // extra_info["lin_vel_reward"] = -hyper_param.lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
@@ -168,6 +176,7 @@ namespace quadrotors
 
         thrusts_real.setZero();
         u_lpf.setZero();
+        last_u_lpf = u_lpf;
     }
 
     void Simulator::reset(VectorRef<Scalar> obs)
@@ -184,8 +193,8 @@ namespace quadrotors
 
         itr = 0;
         random_state();
-        // quad_param.random_only_k();
-        quad_param.random_all();
+        quad_param.random_only_k();
+        // quad_param.random_all();
         // quad_param.set_k((Vector<4>() << 0,1,1,1).finished());
 
         get_obs(obs);
@@ -207,7 +216,7 @@ namespace quadrotors
     {
         obs.setZero();
         obs.segment<13>(0) = x.segment<13>(0);
-        // obs.segment<4>(13) = x.segment<NU>(U_LPF);
+        // obs.segment<4>(13) = u_lpf;
         obs.segment<4>(13) = u;
         obs.segment<3>(17) = get_acc();
         get_noise_vector(obs_noise_std, obs_noise);
@@ -236,6 +245,8 @@ namespace quadrotors
         omega_dot_lpf.last_input = obs.segment<3>(10);
         omega_dot_lpf.last_output = Matrix<3, 1>::Zero();
         obs = obs.cwiseQuotient(obs_normalized_max);
+        last_u_lpf = u_lpf;
+
     }
 
     void Simulator::get_state(VectorRef<Scalar> state)

@@ -6,7 +6,7 @@
 namespace quadrotors
 {
     constexpr Scalar rk_max_dt = 2.5e-3;
-    constexpr Scalar lpf_tau_inv = 1/0.06;
+    constexpr Scalar lpf_tau_inv = 1/0.02;
 
     class Integrator
     {
@@ -40,7 +40,8 @@ namespace quadrotors
 
             for (int i = 0; i < NTHRUSTS; i++)
             {
-                Scalar dot = quad_param.k(i) * x(i + U_LPF) - x(i + THRUSTS_REAL);
+                Scalar dot = quad_param.k(i) * u(i) - x(i + THRUSTS_REAL);
+                // Scalar dot = quad_param.k(i) * x(i + U_LPF) - x(i + THRUSTS_REAL);
                 if (dot)
                     x_dot(i + THRUSTS_REAL) = quad_param.rotor_time_constant_up_inv * dot;
                 else
