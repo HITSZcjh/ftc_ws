@@ -359,7 +359,7 @@ class SimpleUAVModel(object):
                                     color='b', label='Z')
             
             ani = FuncAnimation(self.fig, self.update, 
-                                frames=self.log_R_list.shape[0], interval=10, repeat=True)
+                                frames=self.log_R_list.shape[0], interval=2.5, repeat=True)
             # writer = FFMpegWriter(fps=100, metadata=dict(artist='Me'), bitrate=1800)
             # path_prefix = os.path.dirname(os.path.realpath(__file__))+"/data/"
             # ani.save(path_prefix+"output.mp4", writer=writer)

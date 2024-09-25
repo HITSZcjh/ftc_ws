@@ -322,7 +322,7 @@ if __name__ == "__main__":
         ppo.load_model(load_actor_model_path, load_critic_model_path, 360)
         ppo.eval_plot()
     else:
-        log_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './log_data6')
+        log_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './log_data7')
         if not (os.path.exists(log_data_path)):
             os.makedirs(log_data_path)
         logdir = "rl_model" + time.strftime("%d-%m-%Y_%H-%M-%S")

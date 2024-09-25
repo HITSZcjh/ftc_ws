@@ -114,6 +114,16 @@ num = 200
 load_actor_model_path = "/home/jiao/test_ws/src/rl/model/actor_model31-07-2024_19-39-14"
 load_critic_model_path = "/home/jiao/test_ws/src/rl/model/critic_model31-07-2024_19-39-14"
 num = 280
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model19-08-2024_19-18-52"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model19-08-2024_19-18-52"
+num = 530
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model19-08-2024_19-18-26"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model19-08-2024_19-18-26"
+num = 550
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-08-2024_21-40-46"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-08-2024_21-40-46"
+num = 610
+
 
 # no k
 # load_actor_model_path = "/home/jiao/test_ws/src/rl/model/actor_model31-07-2024_10-21-15"
@@ -137,23 +147,67 @@ num = 280
 
 
 #ADD LPF with K
-load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_14-15-19"
-load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_14-15-19"
-num = 410
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_14-15-19"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_14-15-19"
+# num = 410
 
-load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_11-59-43"
-load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_11-59-43"
-num = 1200
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_11-59-43"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_11-59-43"
+# num = 1200
 
 #ADD LPF no K
-load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_17-51-31"
-load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_17-51-31"
-num = 460
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_17-51-31"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_17-51-31"
+# num = 460
 
-load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_20-51-36"
-load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_20-51-36"
-num = 660
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_20-51-36"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_20-51-36"
+# num = 660
 
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model16-08-2024_11-06-15"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model16-08-2024_11-06-15"
+# num = 480
+
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model18-08-2024_13-06-17"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model18-08-2024_13-06-17"
+# num = 720
+
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model18-08-2024_17-46-39"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model18-08-2024_17-46-39"
+# num = 350
+
+#ADD LPF no enable rotate
+# add noise
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model16-08-2024_14-36-17"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model16-08-2024_14-36-17"
+# num = 480
+# # # no noise
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model18-08-2024_10-38-54"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model18-08-2024_10-38-54"
+# num = 580
+
+#no LPF no enable rotate limit
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model18-08-2024_19-11-37"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model18-08-2024_19-11-37"
+# num = 380
+
+#no LPF enable rotate limit
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model18-08-2024_19-17-17"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model18-08-2024_19-17-17"
+# num = 540
+
+# with k no lpf
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model27-08-2024_10-58-56"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model27-08-2024_10-58-56"
+num = 650
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model27-08-2024_19-33-53"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model27-08-2024_19-33-53"
+num = 850
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model28-08-2024_10-19-49"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model28-08-2024_10-19-49"
+num = 760
 if __name__=="__main__":
     model = RLModel(log=True)
     model.print_quad_param()

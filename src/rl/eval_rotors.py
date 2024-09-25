@@ -40,19 +40,64 @@ load_critic_model_path = "/home/jiao/test_ws/src/rl/model/critic_model10-08-2024
 num = 610
 
 #ADD LPF with K
-# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_14-15-19"
-# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_14-15-19"
-# num = 410
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_14-15-19"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_14-15-19"
+num = 410
 
 #ADD LPF no K
-load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_17-51-31"
-load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_17-51-31"
-num = 460
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_17-51-31"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_17-51-31"
+# num = 460
 
 # load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model15-08-2024_20-51-36"
 # load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model15-08-2024_20-51-36"
 # num = 660
 
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model16-08-2024_11-06-15"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model16-08-2024_11-06-15"
+# num = 480
+
+#ADD LPF no enable rotate
+# add noise
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model16-08-2024_14-36-17"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model16-08-2024_14-36-17"
+# num = 480
+# # no noise
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model16-08-2024_17-48-57"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model16-08-2024_17-48-57"
+# num = 480
+
+#no LPF no enable rotate
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model18-08-2024_19-11-37"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model18-08-2024_19-11-37"
+# num = 380
+
+# load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-08-2024_18-29-40"
+# load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-08-2024_18-29-40"
+# num = 280
+
+# with k no lpf
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-08-2024_21-40-46"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-08-2024_21-40-46"
+num = 610
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model27-08-2024_10-58-56"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model27-08-2024_10-58-56"
+num = 650
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model27-08-2024_19-33-53"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model27-08-2024_19-33-53"
+num = 850
+
+# with k \ add lpf \ du reward
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model28-08-2024_10-19-49"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model28-08-2024_10-19-49"
+num = 760
+
+# with k \ add lpf \ du reward \ add noise
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model29-08-2024_14-35-02"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model29-08-2024_14-35-02"
+num = 700
 
 if __name__=="__main__":
     rospy.init_node("UAV_RL_node", anonymous=None)
@@ -64,9 +109,11 @@ if __name__=="__main__":
 
     state = np.zeros(23)
     u = 0*np.ones(4)
-    u_lpf = LPF(ts,1/0.04,np.zeros(4))
+    u_lpf = LPF(ts,1/0.02,np.zeros(4))
     acc_list = []
-    for i in range(5000):
+    last_f_target = np.zeros(4)
+    last_f_target_list = []
+    for i in range(20000):
         start_time = time.perf_counter()
         obs, acc, omega_dot_f, acc_with_bias = model.get_obs(rl=True)
         acc_list.append(acc_with_bias.copy())
@@ -80,7 +127,7 @@ if __name__=="__main__":
         state[20:23] = omega_dot_f
         state /= np.array((5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30, 6, 6, 6, 6, 5, 5, 30, 30, 30, 30))
         
-        model.k = np.array([1,1,0,1])
+        model.k = np.array([1,0,1,1])
         if not obs_with_k:
             u = ppo.actor.get_action_without_sample(state)
         else:
@@ -89,7 +136,7 @@ if __name__=="__main__":
 
         u = (u+1)*3
         u = np.clip(u, 0, 6)
-        u = u_lpf.calc(u)
+        # u = u_lpf.calc(u)
         # if(i>1000 and i < 3000):
         #     model.k = np.array([1,1,(3000-i)/2000,1])
         # if(i>3000):
@@ -102,6 +149,8 @@ if __name__=="__main__":
         # elif(i<3000):
         #     model.k = np.array([1,1,0,1])
         model.step(u)
+        last_f_target_list.append((u-last_f_target).copy()/ts)
+        last_f_target = u
         end_time = time.perf_counter()
         print("time: ", end_time-start_time)
         rate.sleep()
@@ -111,12 +160,14 @@ if __name__=="__main__":
     #     u = ppo.actor.get_action(state)
     #     u = u[0]*6
     #     state = model.step(u)
-    acc_list = np.array(acc_list)
-    t = np.arange(0, len(acc_list)*ts, ts)
-    plt.plot(t, acc_list[:, 0], label="acc_x")
-    plt.plot(t, acc_list[:, 1], label="acc_y")
-    plt.plot(t, acc_list[:, 2], label="acc_z")
-    plt.legend()
+    # acc_list = np.array(acc_list)
+    # t = np.arange(0, len(acc_list)*ts, ts)
+    # plt.plot(t, acc_list[:, 0], label="acc_x")
+    # plt.plot(t, acc_list[:, 1], label="acc_y")
+    # plt.plot(t, acc_list[:, 2], label="acc_z")
+    # plt.legend()
+    plt.plot(last_f_target_list)
 
     model.log_show()
+    plt.tight_layout()  # 调整子图布局
     plt.show()

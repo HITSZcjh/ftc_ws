@@ -8,7 +8,8 @@ from mav_msgs.msg import Actuators
 from matplotlib import pyplot as plt
 import rospy
 import sys
-from uav_model import SimpleUAVModel
+sys.path.append("/home/jiao/rl_quad_ws/ftc_ws")
+from src.rl.uav_model import SimpleUAVModel
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 class LPF(object):
@@ -91,6 +92,7 @@ class RotorsUAVModel(object):
         if self.log:
             self.log_state_list = []
         
+        self.f_target = np.zeros(4)
         self.omega_lpf = LPF(self.ts, BW, np.zeros(3))
 
     def get_obs(self, rl=False):
@@ -119,7 +121,7 @@ class RotorsUAVModel(object):
             obs, R, acc_B, f_real = np.hstack((p, v_w, q, w)), R, acc_B.reshape(-1,1), f_real
 
         if self.log:
-            self.log_state_list.append(np.hstack((obs, f_real)))
+            self.log_state_list.append(np.hstack((obs, f_real, self.f_target)))
 
         if rl:
             omega_dot_f = self.omega_lpf.calc_with_derivative(obs[10:13])[1]
@@ -128,10 +130,10 @@ class RotorsUAVModel(object):
             return obs, R, acc_B, f_real
 
     def step(self, f_target, target=None):
-        f_target = np.clip(f_target, 0, self.rotor_thrust_coeff*self.max_rotors_speed**2)
+        self.f_target = np.clip(f_target, 0, self.rotor_thrust_coeff*self.max_rotors_speed**2)
 
         if self.delay_time is not None:
-            self.f_target_list.append(f_target)
+            self.f_target_list.append(self.f_target)
             self.f_target_list.pop(0)
         
         self.cmd.header.stamp = rospy.Time.now()
@@ -198,16 +200,31 @@ class RotorsUAVModel(object):
             self.axs[1,1].plot(t, self.log_state_list[:, 12], label="wz")
             self.axs[1,1].legend()
 
-
             self.fig, self.axs = plt.subplots(2,2)
-            self.axs[0,0].plot(t, self.log_state_list[:,13], label="f1_real")
+
+            # 绘制数据并设置y轴范围
+            self.axs[0,0].plot(t, self.log_state_list[:,13], label="f1_real", color='blue')
+            self.axs[0,0].plot(t, self.log_state_list[:,17], label="f1_target", color='orange', alpha=0.5)
+            self.axs[0,0].set_ylim(0, 5)
             self.axs[0,0].legend()
-            self.axs[0,1].plot(t, self.log_state_list[:,14], label="f2_real")
+
+            self.axs[0,1].plot(t, self.log_state_list[:,14], label="f2_real", color='blue')
+            self.axs[0,1].plot(t, self.log_state_list[:,18], label="f2_target", color='orange', alpha=0.5)
+            self.axs[0,1].set_ylim(0, 5)
             self.axs[0,1].legend()
-            self.axs[1,0].plot(t, self.log_state_list[:,15], label="f3_real")
+
+            self.axs[1,0].plot(t, self.log_state_list[:,15], label="f3_real", color='blue')
+            self.axs[1,0].plot(t, self.log_state_list[:,19], label="f3_target", color='orange', alpha=0.5)
+            self.axs[1,0].set_ylim(0, 5)
             self.axs[1,0].legend()
-            self.axs[1,1].plot(t, self.log_state_list[:,16], label="f4_real")
+
+            self.axs[1,1].plot(t, self.log_state_list[:,16], label="f4_real", color='blue')
+            self.axs[1,1].plot(t, self.log_state_list[:,20], label="f4_target", color='orange', alpha=0.5)
+            self.axs[1,1].set_ylim(0, 5)
             self.axs[1,1].legend()
+
+
+
 if __name__ == "__main__":
     rospy.init_node("rotors_model")
     uav_model = RotorsUAVModel(0.01)
