@@ -125,7 +125,7 @@ namespace quadrotors
         // SIZE
         NX = 21,
         NU = NTHRUSTS,
-        NOBS = 23
+        NOBS = 15
     };
 
 }

@@ -3,7 +3,7 @@ import numpy as np
 import sys
 np.set_printoptions(threshold=sys.maxsize, precision=3, suppress=True)
 
-obs_with_k = True
+obs_with_k = False
 
 class RLModel:
     def __init__(self, log=False, ts=0.02):
@@ -73,15 +73,12 @@ class RLModel:
         self.extra_infos.append(info.copy())
 
         if self.log:
-            log_temp = np.hstack((self._observation[:,:13], np.clip(action, 0, 6))).astype(np.float32)
+            log_temp = self._observation
             self.obs_list[0].append(log_temp[0,:].copy())
             self.obs_list[1].append(log_temp[int(self.num_envs/4),:].copy())
             self.obs_list[2].append(log_temp[int(self.num_envs/2)+int(self.num_envs/4*0.0),:].copy())
             self.obs_list[3].append(log_temp[int(self.num_envs*3/4)+int(self.num_envs/4*0.0),:].copy())
             self.obs_list[4].append(log_temp[self.num_envs-1,:].copy())
-
-            pos = self._observation[:,0:3]*np.array((5, 5, 5))
-            self.pos_err += np.linalg.norm(pos - self.pos_goal, axis=1) 
 
         
         return self.get_obs(), self._reward.copy(), self._done.copy()
@@ -125,81 +122,35 @@ class RLModel:
         if self.log:
             import matplotlib.pyplot as plt
             self.obs_list = np.array(self.obs_list)
-            self.obs_list[:,:,:13] = self.obs_list[:,:,:13]*np.array((5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30))
+            self.obs_list[:,:,:15] = self.obs_list[:,:,:15]*np.array((5, 1, 1, 1, 1, 10, 10, 10, 6, 6, 6, 6, 1, 1, 5))
             self.obs_list = self.obs_list[:,:-1,:]
             t = np.linspace(0, self.obs_list.shape[1]*self.ts, self.obs_list.shape[1])
 
-            self.pos_err /= self.obs_list.shape[1]
-            self.fig, self.axs = plt.subplots(2, 2)
-            k = np.linspace(0, 1, int(self.num_envs/4))
-            self.axs[0,0].plot(k, self.pos_err[:int(self.num_envs/4)], label="k1")
-            self.axs[0,0].set_ylim(0, 2)
-            self.axs[0,0].legend()
-            # self.axs[0,0].set_ylabel("pos_err")
-            self.axs[0,1].plot(k, self.pos_err[int(self.num_envs/4):int(self.num_envs/2)], label="k2")
-            self.axs[0,1].set_ylim(0, 2)
-            # self.axs[0,1].set_ylabel("pos_err")
-            self.axs[0,1].legend()
-            self.axs[1,0].plot(k, self.pos_err[int(self.num_envs/2):int(self.num_envs*3/4)], label="k3")
-            self.axs[1,0].set_ylim(0, 2)
-            # self.axs[1,0].set_ylabel("pos_err")
-            self.axs[1,0].legend()
-            self.axs[1,1].plot(k, self.pos_err[int(self.num_envs*3/4):], label="k4")
-            self.axs[1,1].set_ylim(0, 2)
-            # self.axs[1,1].set_ylabel("pos_err")
-            self.axs[1,1].legend()
-
             for i in range(5):
-
-                # self.fig, self.axs = plt.subplots(2, 2)
-                # self.axs[0,0].plot(t, self.obs_list[i, :, 0], label="px")
-                # self.axs[0,0].plot(t, self.obs_list[i, :, 1], label="py")
-                # self.axs[0,0].plot(t, self.obs_list[i, :, 2], label="pz")
-                # self.axs[0,0].set_ylim(-1, 4)   
-                # self.axs[0,0].legend()
-                # self.axs[0,1].plot(t, self.obs_list[i, :, 3], label="vx")
-                # self.axs[0,1].plot(t, self.obs_list[i, :, 4], label="vy")
-                # self.axs[0,1].plot(t, self.obs_list[i, :, 5], label="vz")
-                # self.axs[0,1].set_ylim(-3, 3)
-                # self.axs[0,1].legend()
-                # self.axs[1,0].plot(t, self.obs_list[i, :, 6], label="w")
-                # self.axs[1,0].plot(t, self.obs_list[i, :, 7], label="x")
-                # self.axs[1,0].plot(t, self.obs_list[i, :, 8], label="y")
-                # self.axs[1,0].plot(t, self.obs_list[i, :, 9], label="z")
-                # self.axs[1,0].legend()
-                # # self.axs[1,0].set_ylim(0, 1)
-
-                # self.axs[1,1].plot(t, self.obs_list[i, :, 10], label="wx")
-                # self.axs[1,1].plot(t, self.obs_list[i, :, 11], label="wy")
-                # self.axs[1,1].plot(t, self.obs_list[i, :, 12], label="wz")
-                # self.axs[1,1].legend()
-                # self.axs[1,1].set_ylim(-18, 18)
-
-
                 self.fig, self.axs = plt.subplots(2, 3)
-                self.axs[0,0].plot(t, self.obs_list[i, :, 0], label="px")
-                self.axs[0,0].plot(t, self.obs_list[i, :, 1], label="py")
-                self.axs[0,0].plot(t, self.obs_list[i, :, 2], label="pz")
+                self.axs[0,0].plot(t, self.obs_list[i, :, 0], label="vz")
                 # self.axs[0,0].set_ylim(-5, 5)   
                 self.axs[0,0].legend()
-                self.axs[0,1].plot(t, self.obs_list[i, :, 3], label="vx")
-                self.axs[0,1].plot(t, self.obs_list[i, :, 4], label="vy")
-                self.axs[0,1].plot(t, self.obs_list[i, :, 5], label="vz")
+                self.axs[0,1].plot(t, self.obs_list[i, :, 1], label="w")
+                self.axs[0,1].plot(t, self.obs_list[i, :, 2], label="x")
+                self.axs[0,1].plot(t, self.obs_list[i, :, 3], label="y")
+                self.axs[0,1].plot(t, self.obs_list[i, :, 4], label="z")
+
                 # self.axs[0,1].set_ylim(-5, 5)
                 self.axs[0,1].legend()
-                self.axs[1,0].plot(t, self.obs_list[i, :, 6], label="w")
-                self.axs[1,0].plot(t, self.obs_list[i, :, 7], label="x")
-                self.axs[1,0].plot(t, self.obs_list[i, :, 8], label="y")
-                self.axs[1,0].plot(t, self.obs_list[i, :, 9], label="z")
+                self.axs[1,0].plot(t, self.obs_list[i, :, 5], label="wx")
+                self.axs[1,0].plot(t, self.obs_list[i, :, 6], label="wy")
+                self.axs[1,0].plot(t, self.obs_list[i, :, 7], label="wz")
                 self.axs[1,0].legend()
-                self.axs[1,1].plot(t, self.obs_list[i, :, 10], label="wx")
-                self.axs[1,1].plot(t, self.obs_list[i, :, 11], label="wy")
-                self.axs[1,1].plot(t, self.obs_list[i, :, 12], label="wz")
+                self.axs[1,1].plot(t, self.obs_list[i, :, 8], label="u1")
+                self.axs[1,1].plot(t, self.obs_list[i, :, 9], label="u2")
+                self.axs[1,1].plot(t, self.obs_list[i, :, 10], label="u3")
+                self.axs[1,1].plot(t, self.obs_list[i, :, 11], label="u4")
+
                 self.axs[1,1].legend()
-                self.axs[0,2].plot(t, self.obs_list[i, :, 13], label="f1")
-                self.axs[0,2].plot(t, self.obs_list[i, :, 14], label="f2")
-                self.axs[0,2].plot(t, self.obs_list[i, :, 15], label="f3")
-                self.axs[0,2].plot(t, self.obs_list[i, :, 16], label="f4")
+                self.axs[0,2].plot(t, self.obs_list[i, :, 12], label="cmd0")
+                self.axs[0,2].plot(t, self.obs_list[i, :, 13], label="cmd1")
+                self.axs[0,2].plot(t, self.obs_list[i, :, 14], label="cmd2")
                 self.axs[0,2].legend()
             plt.show()
 
@@ -215,7 +166,7 @@ if __name__ == '__main__':
         obs = model.step(action)[0][0]
 
         state = model.get_state()[0]
-        # print("obs:", obs)
+        print("obs:", obs)
         print("x:", state)
 
 

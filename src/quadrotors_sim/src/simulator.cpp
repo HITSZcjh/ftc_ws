@@ -62,19 +62,12 @@ namespace quadrotors
         x = integrator.integrate(x, u, hyper_param.dt, quad_param, ode_func_noise);
         q = q / q.norm();
 
-        if (p(0) < world_box[0][0])
-            p(0) = world_box[0][0];
-        if (p(0) > world_box[0][1])
-            p(0) = world_box[0][1];
-        if (p(1) < world_box[1][0])
-            p(1) = world_box[1][0];
-        if (p(1) > world_box[1][1])
-            p(1) = world_box[1][1];
-        if (p(2) < world_box[2][0])
-            p(2) = world_box[2][0];
-        if (p(2) > world_box[2][1])
-            p(2) = world_box[2][1];
-
+        p(0) = 0;
+        p(1) = 0;
+        p(2) = 0;
+        v(0) = 0;
+        v(1) = 0;
+        
         rewards = calc_reward();
         dones = check_done();
         itr++;
@@ -85,9 +78,9 @@ namespace quadrotors
         {
             // calc obs
             get_obs(obs);
-            Vector<3> omega_dot;
-            omega_dot_lpf.calc_derivative(obs.segment<3>(10), omega_dot);
-            obs.segment<3>(20) += omega_dot; // add noise
+            // Vector<3> omega_dot;
+            // omega_dot_lpf.calc_derivative(obs.segment<3>(10), omega_dot);
+            // obs.segment<3>(20) += omega_dot; // add noise
             obs = obs.cwiseQuotient(obs_normalized_max);
         }
 
@@ -101,11 +94,23 @@ namespace quadrotors
 
     Scalar Simulator::calc_reward()
     {
-        extra_info["pos_err"] = (p - goal_pos).squaredNorm();
-        extra_info["lin_vel_err"] = v.squaredNorm();
-        extra_info["ori_err"] = (q.segment<2>(0)).squaredNorm();
-        Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
-        extra_info["ang_vel_err"] = (w.segment<2>(0)).squaredNorm() + factor * w(2) * w(2);
+        // extra_info["pos_err"] = (p - goal_pos).squaredNorm();
+        extra_info["lin_vel_err"] = std::abs(v(2)-cmd(2));
+
+        Vector<3> nw_d;
+        nw_d(0) = cmd(0);
+        nw_d(1) = cmd(1);
+        nw_d(2) = std::sqrt(1-cmd(0)*cmd(0)-cmd(1)*cmd(1));
+
+        Vector<3> nb = w.normalized();
+        if(nb(2)<0)
+            nb = -nb;
+        Vector<3> nw = R(q)*nb;
+
+        extra_info["ori_err"] = (nw-nw_d).squaredNorm();
+        // Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
+        extra_info["ang_vel_err"] = (w.segment<2>(0)).squaredNorm();
+        // extra_info["ang_vel_err"] = (w.segment<2>(0)).squaredNorm() + 0.01*std::abs(w(2));
         Vector<> du = (u_lpf-last_u_lpf).cwiseAbs()/hyper_param.dt;
         for(int i = 0;i<NU;i++)
         {
@@ -117,11 +122,7 @@ namespace quadrotors
         extra_info["pos_reward"] = hyper_param.pos_coeff * extra_info["pos_err"];
         extra_info["lin_vel_reward"] = hyper_param.lin_vel_coeff * extra_info["lin_vel_err"];
         extra_info["ori_reward"] = hyper_param.ori_coeff * extra_info["ori_err"];
-        // Scalar itr_discount = itr / (2.f / hyper_param.dt) < 1.f ? itr / (2.f / hyper_param.dt) : 1.f;
-        // itr_discount = 1;
-        // Scalar factor = pow(quad_param.get_k().sum() - 3, 12) * itr_discount;
         extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * extra_info["ang_vel_err"];
-
         extra_info["act_reward"] = hyper_param.act_coeff * extra_info["act_err"];
 
         // extra_info["pos_reward"] = hyper_param.pos_coeff * exp(-(x.segment(0, 3) - goal_pos).squaredNorm()/30);
@@ -144,12 +145,12 @@ namespace quadrotors
 
     void Simulator::random_state()
     {
-        p(0) = uniform_dist_(random_gen_) * 1;
-        p(1) = uniform_dist_(random_gen_) * 1;
-        p(2) = uniform_dist_(random_gen_) * 1 + 3;
+        // p(0) = uniform_dist_(random_gen_) * 1;
+        // p(1) = uniform_dist_(random_gen_) * 1;
+        // p(2) = uniform_dist_(random_gen_) * 1 + 3;
 
-        v(0) = uniform_dist_(random_gen_) * 1;
-        v(1) = uniform_dist_(random_gen_) * 1;
+        // v(0) = uniform_dist_(random_gen_) * 1;
+        // v(1) = uniform_dist_(random_gen_) * 1;
         v(2) = uniform_dist_(random_gen_) * 1;
 
         Scalar roll = uniform_dist_(random_gen_) * 0.15 * M_PI;
@@ -169,12 +170,20 @@ namespace quadrotors
         w(1) = uniform_dist_(random_gen_) * 1;
         w(2) = uniform_dist_(random_gen_) * 1;
 
-        thrusts_real(0) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
-        thrusts_real(1) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
-        thrusts_real(2) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
-        thrusts_real(3) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
+        // thrusts_real(0) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
+        // thrusts_real(1) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
+        // thrusts_real(2) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
+        // thrusts_real(3) = (uniform_dist_(random_gen_) + 1) * thrust_range[1] / 2;
 
         thrusts_real.setZero();
+
+        Scalar theta = uniform_dist_(random_gen_) * M_PI;
+        Scalar alpha = uniform_dist_(random_gen_) * M_PI/6;
+        cmd(0) = std::sin(alpha) * std::cos(theta);
+        cmd(1) = std::sin(alpha) * std::sin(theta);
+        cmd(2) = uniform_dist_(random_gen_) * 1.0;
+
+
         u_lpf.setZero();
         last_u_lpf = u_lpf;
     }
@@ -195,7 +204,8 @@ namespace quadrotors
         random_state();
         quad_param.random_only_k();
         // quad_param.random_all();
-        // quad_param.set_k((Vector<4>() << 0,1,1,1).finished());
+        quad_param.set_k((Vector<4>() << 0,1,1,1).finished());
+
 
         get_obs(obs);
 
@@ -215,10 +225,10 @@ namespace quadrotors
     void Simulator::get_obs(VectorRef<Scalar> obs)
     {
         obs.setZero();
-        obs.segment<13>(0) = x.segment<13>(0);
-        // obs.segment<4>(13) = u_lpf;
-        obs.segment<4>(13) = u;
-        obs.segment<3>(17) = get_acc();
+        obs.segment<8>(0) = x.segment<8>(5);
+        obs.segment<4>(8) = u_lpf;
+        // obs.segment<4>(13) = u;
+        obs.segment<3>(12) = cmd;
         get_noise_vector(obs_noise_std, obs_noise);
         obs += obs_noise;
     }

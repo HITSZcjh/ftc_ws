@@ -3,17 +3,11 @@
 #include "yaml-cpp/yaml.h"
 #include <unordered_map>
 
-
 namespace quadrotors
 {
     // CONST
     constexpr Scalar obs_noise_std[NOBS] = {
         0.02,
-        0.02,
-        0.02,
-        0.1,
-        0.1,
-        0.1,
         0.017,
         0.017,
         0.017,
@@ -25,19 +19,19 @@ namespace quadrotors
         0,
         0,
         0,
-        0.5,
-        0.5,
-        0.5,
-        0.0,
-        0.0,
-        0.0,
+        0,
+        0,
+        0,
     };
 
-    constexpr Scalar world_box[3][2] = {{-5, 5}, {-5, 5}, {0, 6}};
     // const Vector<NX> goal_state = (Vector<NX>() << 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).finished();
-    const Vector<NP> goal_pos = (Vector<NP>() << 0, 0, 3).finished();
 
-    const Vector<NOBS> obs_normalized_max = (Vector<NOBS>() << 5, 5, 5, 5, 5, 5, 1, 1, 1, 1, 5, 5, 30, thrust_range[1], thrust_range[1], thrust_range[1], thrust_range[1], 5, 5, 30, 30, 30, 30).finished();
+    const Vector<NOBS> obs_normalized_max = (Vector<NOBS>() << 5,
+                                             1, 1, 1, 1,
+                                             10, 10, 10,
+                                             thrust_range[1], thrust_range[1], thrust_range[1], thrust_range[1],
+                                             1, 1, 5)
+                                                .finished();
 
     class Simulator;
     class HyperParam
@@ -87,6 +81,8 @@ namespace quadrotors
         VectorRef<Scalar, NTHRUSTS> thrusts_real;
         VectorRef<Scalar, NU> u_lpf;
         Vector<NU> last_u_lpf;
+        Vector<3> cmd;
+
 
         Vector<NX> ode_func_noise;
         Vector<NOBS> obs_noise;
