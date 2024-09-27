@@ -10,31 +10,40 @@ from rl_model import obs_with_k
 class PositionController:
     def __init__(self, ts) -> None:
         self.ts = ts
-        # self.kp = np.array([0.1,0.1,1], dtype=np.float32)
-        # self.kv = np.array([0.3,0.3,1], dtype=np.float32)
+        self.kp_pos = np.array([1,1,0.3], dtype=np.float32)
+        self.ki_pos = np.array([0.0,0.0,0], dtype=np.float32)
+        self.int_pos = np.zeros_like(self.ki_pos)
+        self.kp_vel = np.array([1,1,1], dtype=np.float32)
+        self.ki_vel = np.array([0.5,0.5,0], dtype=np.float32)
+        self.int_vel = np.zeros_like(self.ki_vel)
+
+        self.vel_max = 0.5
+        # self.int_max_pos = 2*self.vel_max / (self.ki_pos+1e-8)
+        self.acc_max = 4.0
+        self.g = np.array([0,0,-9.81])
+        self.nw_xy_max = np.sin(np.pi/18)
+
+        # self.kp = np.array([1,1,0.3], dtype=np.float32)
+        # self.kv = np.array([1,1,1], dtype=np.float32)
         
-        # self.vel_max = 0.5
+        # self.vel_max = 1.0
         # self.acc_max = 1.0
         # self.g = np.array([0,0,-9.81])
-        # self.nw_xy_max = np.sin(np.pi/18)
-
-        self.kp = np.array([0.3,0.3,1], dtype=np.float32)
-        self.kv = np.array([1,1,1], dtype=np.float32)
-        
-        self.vel_max = 1.0
-        self.acc_max = 1.0
-        self.g = np.array([0,0,-9.81])
-        self.nw_xy_max = np.sin(np.pi/6)
+        # self.nw_xy_max = np.sin(np.pi/6)
 
     def calc(self, ref_pos, fdb_pos, fdb_vel):
-        ref_vel = np.clip((ref_pos-fdb_pos)*self.kp, -self.vel_max, self.vel_max)
-        ref_acc = np.clip((ref_vel-fdb_vel)*self.kv, -self.acc_max, self.acc_max)
-        print("ref_vel:", ref_vel, "ref_acc:", ref_acc)
+        err_pos = ref_pos - fdb_pos
+        self.int_pos += err_pos * self.ts
+        ref_vel = np.clip(err_pos*self.kp_pos+self.int_pos*self.ki_pos, -self.vel_max, self.vel_max)
+        err_vel = ref_vel-fdb_vel
+        self.int_vel += err_vel * self.ts
+        ref_acc = np.clip(err_vel*self.kp_vel+self.int_vel*self.ki_vel, -self.acc_max, self.acc_max)
         nw = (ref_acc-self.g)/np.linalg.norm(ref_acc-self.g)
 
         if(np.linalg.norm(nw[:2])>self.nw_xy_max):
             nw[:2] = nw[:2]/np.linalg.norm(nw[:2])*self.nw_xy_max
-
+        else:
+            print(np.linalg.norm(nw[:2]),self.nw_xy_max)
         return nw[0], nw[1], ref_vel[2]
 
 load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_08-57-08"
@@ -48,6 +57,22 @@ num = 500
 load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_11-10-58"
 load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_11-10-58"
 num = 800
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_12-15-41"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_12-15-41"
+num = 600
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_16-34-59"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_16-34-59"
+num = 1900
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_17-11-27"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_17-11-27"
+num = 1170
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_21-55-21"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_21-55-21"
+num = 3000
 if __name__=="__main__":
     rospy.init_node("UAV_RL_node", anonymous=None)
     ts = 0.0025
@@ -78,15 +103,15 @@ if __name__=="__main__":
         state[12:15] = np.array([nwx, nwy, velz])
         state /= np.array((5, 1, 1, 1, 1, 10, 10, 10, 6, 6, 6, 6, 1, 1, 5))
         
-        model.k = np.array([0,1,1,1])
+        model.k = np.array([1,1,1,1])
         if not obs_with_k:
             u = ppo.actor.get_action_without_sample(state)
         else:
             u = ppo.actor.get_action_without_sample(np.hstack((state,model.k)))
         u = u[0]
 
-        u = (u+1)*3
-        u = np.clip(u, 0, 6)
+        u = (u+1)*1.5
+        u = np.clip(u, 0, 3)
         u = u_lpf.calc(u)
         # if(i>1000 and i < 3000):
         #     model.k = np.array([1,1,(3000-i)/2000,1])

@@ -29,23 +29,23 @@ namespace quadrotors
 
 
     constexpr Scalar g_real = 9.81;
-    constexpr Scalar g_range[2] = {g_real * 0.999, g_real * 1.001};
+    constexpr Scalar g_range[2] = {g_real * 0.95, g_real * 1.05};
     constexpr Scalar rotor_time_constant_up_real = 0.0125;
-    constexpr Scalar rotor_time_constant_up_range[2] = {rotor_time_constant_up_real * 0.9, rotor_time_constant_up_real * 1.1};
+    constexpr Scalar rotor_time_constant_up_range[2] = {rotor_time_constant_up_real * 0.5, rotor_time_constant_up_real * 1.5};
     constexpr Scalar rotor_time_constant_down_real = 0.025;
-    constexpr Scalar rotor_time_constant_down_range[2] = {rotor_time_constant_down_real * 0.9, rotor_time_constant_down_real * 1.1};
+    constexpr Scalar rotor_time_constant_down_range[2] = {rotor_time_constant_down_real * 0.5, rotor_time_constant_down_real * 1.5};
     constexpr Scalar rotor_moment_constant_real = 0.016;
-    constexpr Scalar rotor_moment_constant_range[2] = {rotor_moment_constant_real * 0.8, rotor_moment_constant_real * 1.2};
-    constexpr Scalar body_length_real = 0.17;
-    constexpr Scalar body_length_range[2] = {body_length_real * 0.95, body_length_real * 1.05};
-    constexpr Scalar mass_real = 0.73;
-    constexpr Scalar mass_range[2] = {mass_real * 0.95, mass_real * 1.05};
-    constexpr Scalar inertia_real[3] = {0.007, 0.007, 0.012};
-    constexpr Scalar inertia_range[3][2] = {{inertia_real[0] * 0.95, inertia_real[0] * 1.05},
-                                            {inertia_real[1] * 0.95, inertia_real[1] * 1.05},
-                                            {inertia_real[2] * 0.95, inertia_real[2] * 1.05}};
+    constexpr Scalar rotor_moment_constant_range[2] = {rotor_moment_constant_real * 0.5, rotor_moment_constant_real * 1.5};
+    constexpr Scalar body_length_real = 0.125;
+    constexpr Scalar body_length_range[2] = {body_length_real * 0.8, body_length_real * 1.2};
+    constexpr Scalar mass_real = 0.732;
+    constexpr Scalar mass_range[2] = {mass_real * 0.8, mass_real * 1.2};
+    constexpr Scalar inertia_real[3] = {0.005, 0.005, 0.005};
+    constexpr Scalar inertia_range[3][2] = {{inertia_real[0] * 0.8, inertia_real[0] * 1.2},
+                                            {inertia_real[1] * 0.8, inertia_real[1] * 1.2},
+                                            {inertia_real[2] * 0.8, inertia_real[2] * 1.2}};
     constexpr Scalar vel_drag_factor_real = 0.1;
-    constexpr Scalar vel_drag_factor_range[2] = {vel_drag_factor_real * 0.8, vel_drag_factor_real * 1.2};
+    constexpr Scalar vel_drag_factor_range[2] = {vel_drag_factor_real * 0.5, vel_drag_factor_real * 1.5};
     constexpr Scalar omega_drag_factor_real = 4e-4;
     constexpr Scalar omega_drag_factor_range[2] = {omega_drag_factor_real * 0.5, omega_drag_factor_real * 1.5};
 
@@ -71,7 +71,7 @@ namespace quadrotors
     // constexpr Scalar omega_drag_factor_range[2] = {omega_drag_factor_real * 0.7, omega_drag_factor_real * 1.3};
 
 
-    constexpr Scalar thrust_range[2] = {0, 6};
+    constexpr Scalar thrust_range[2] = {0, 3};
 
     class Integrator;
     class QuadParam

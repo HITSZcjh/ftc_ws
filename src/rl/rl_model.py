@@ -58,7 +58,7 @@ class RLModel:
     
     def step(self, action):
         action = action.copy()
-        action = (action+1)*3
+        action = (action+1)*1.5
         self.env.step(action, self._observation, self._reward, self._done, self._extraInfo)
 
         for i in range(self.num_envs):

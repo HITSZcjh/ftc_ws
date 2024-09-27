@@ -4,9 +4,9 @@ from PPO import PPO
 import numpy as np
 import matplotlib.pyplot as plt
 
-load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_11-10-58"
-load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_11-10-58"
-num = 800
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_21-55-21"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_21-55-21"
+num = 3000
 if __name__=="__main__":
     model = RLModel(log=True)
     obs = model.reset()
@@ -28,7 +28,7 @@ if __name__=="__main__":
     # print(model.k)
 
     dones = []
-    for i in range(501):
+    for i in range(251):
         # print(obs[1])
         action = ppo.actor.get_action_without_sample(obs)
         # print(obs[:2,5:8])

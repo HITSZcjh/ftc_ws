@@ -103,13 +103,21 @@ namespace quadrotors
         nw_d(2) = std::sqrt(1-cmd(0)*cmd(0)-cmd(1)*cmd(1));
 
         Vector<3> nb = w.normalized();
+        nb = (Vector<3>() << 0,0,1).finished();
+
         if(nb(2)<0)
             nb = -nb;
         Vector<3> nw = R(q)*nb;
 
-        extra_info["ori_err"] = (nw-nw_d).squaredNorm();
+        Scalar dot = nw.dot(nw_d);
+        if(dot>=1)
+            dot = 1-1e-6;
+        if(dot<=-1)
+            dot = -1+1e-6;
+        extra_info["ori_err"] = std::acos(dot);
+        // extra_info["ori_err"] = (nw-nw_d).squaredNorm();
         // Scalar factor = pow(quad_param.get_k().sum() - 3, 12);
-        extra_info["ang_vel_err"] = (w.segment<2>(0)).squaredNorm();
+        extra_info["ang_vel_err"] = (w.segment<3>(0)).squaredNorm();
         // extra_info["ang_vel_err"] = (w.segment<2>(0)).squaredNorm() + 0.01*std::abs(w(2));
         Vector<> du = (u_lpf-last_u_lpf).cwiseAbs()/hyper_param.dt;
         for(int i = 0;i<NU;i++)
@@ -178,10 +186,10 @@ namespace quadrotors
         thrusts_real.setZero();
 
         Scalar theta = uniform_dist_(random_gen_) * M_PI;
-        Scalar alpha = uniform_dist_(random_gen_) * M_PI/6;
+        Scalar alpha = uniform_dist_(random_gen_) * M_PI/18;
         cmd(0) = std::sin(alpha) * std::cos(theta);
         cmd(1) = std::sin(alpha) * std::sin(theta);
-        cmd(2) = uniform_dist_(random_gen_) * 1.0;
+        cmd(2) = uniform_dist_(random_gen_) * 0.5;
 
 
         u_lpf.setZero();
@@ -204,7 +212,7 @@ namespace quadrotors
         random_state();
         quad_param.random_only_k();
         // quad_param.random_all();
-        quad_param.set_k((Vector<4>() << 0,1,1,1).finished());
+        quad_param.set_k((Vector<4>() << 1,1,1,1).finished());
 
 
         get_obs(obs);

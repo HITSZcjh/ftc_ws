@@ -17,7 +17,7 @@ class PPO:
         ptu.init_gpu(use_gpu=use_gpu)
         self.env = RLModel()
         self.learning_rate = 5e-3
-        self.n_step = 250
+        self.n_step = 125
         self.batchsize = self.n_step*self.env.num_envs
         self.eval_bathsize = 100000
         self.replay_buffer = ReplayBuffer(max_size=self.batchsize)
@@ -322,7 +322,7 @@ if __name__ == "__main__":
         ppo.load_model(load_actor_model_path, load_critic_model_path, 360)
         ppo.eval_plot()
     else:
-        log_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './log_data1')
+        log_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './without_fault/log_data2')
         if not (os.path.exists(log_data_path)):
             os.makedirs(log_data_path)
         logdir = "rl_model" + time.strftime("%d-%m-%Y_%H-%M-%S")
