@@ -10,11 +10,11 @@ from rl_model import obs_with_k
 class PositionController:
     def __init__(self, ts) -> None:
         self.ts = ts
-        self.kp_pos = np.array([1,1,0.3], dtype=np.float32)
-        self.ki_pos = np.array([0.0,0.0,0], dtype=np.float32)
+        self.kp_pos = np.array([1,1,0.01], dtype=np.float32)
+        self.ki_pos = np.array([0.0,0.0,0.1], dtype=np.float32)
         self.int_pos = np.zeros_like(self.ki_pos)
         self.kp_vel = np.array([1,1,1], dtype=np.float32)
-        self.ki_vel = np.array([0.5,0.5,0], dtype=np.float32)
+        self.ki_vel = np.array([0.2,0.2,0], dtype=np.float32)
         self.int_vel = np.zeros_like(self.ki_vel)
 
         self.vel_max = 0.5
@@ -42,8 +42,10 @@ class PositionController:
 
         if(np.linalg.norm(nw[:2])>self.nw_xy_max):
             nw[:2] = nw[:2]/np.linalg.norm(nw[:2])*self.nw_xy_max
-        else:
-            print(np.linalg.norm(nw[:2]),self.nw_xy_max)
+        
+        print(ref_vel[2])
+        # print(np.linalg.norm(nw[:2]),self.nw_xy_max)
+
         return nw[0], nw[1], ref_vel[2]
 
 load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_08-57-08"
@@ -73,11 +75,28 @@ num = 1170
 load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model26-09-2024_21-55-21"
 load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model26-09-2024_21-55-21"
 num = 3000
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model27-09-2024_11-19-55"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model27-09-2024_11-19-55"
+num = 1400
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model27-09-2024_21-55-21"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model27-09-2024_21-55-21"
+num = 2400
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model02-10-2024_17-29-30"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model02-10-2024_17-29-30"
+num = 1200
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model02-10-2024_21-40-27"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model02-10-2024_21-40-27"
+num = 1800
+
 if __name__=="__main__":
     rospy.init_node("UAV_RL_node", anonymous=None)
     ts = 0.0025
     rate = rospy.Rate(1/ts)
-    model = RotorsUAVModel(ts=ts, delay_time=0.016 ,log=True, BW=1/0.12)
+    model = RotorsUAVModel(ts=ts, delay_time=None ,log=True, BW=1/0.12)
     ppo = PPO(None, None, None, True)
     ppo.load_model(load_actor_model_path, load_critic_model_path, num)
     state = np.zeros(ppo.env.state_dim)
@@ -90,7 +109,7 @@ if __name__=="__main__":
     pos_controller = PositionController(ts)
     ref_pos = np.array([0,0,3])
 
-    for i in range(20000):
+    for i in range(10000):
         start_time = time.perf_counter()
         obs, acc, omega_dot_f, acc_with_bias = model.get_obs(rl=True)
         acc_list.append(acc_with_bias.copy())
@@ -99,9 +118,9 @@ if __name__=="__main__":
         state[:8] = obs[5:13]
         state[8:12] = u
         nwx, nwy, velz = pos_controller.calc(ref_pos, obs[0:3], obs[3:6])
-        
+
         state[12:15] = np.array([nwx, nwy, velz])
-        state /= np.array((5, 1, 1, 1, 1, 10, 10, 10, 6, 6, 6, 6, 1, 1, 5))
+        state /= np.array((5, 1, 1, 1, 1, 10, 10, 10, 3, 3, 3, 3, 1, 1, 5))
         
         model.k = np.array([1,1,1,1])
         if not obs_with_k:

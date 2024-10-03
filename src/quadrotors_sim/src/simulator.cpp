@@ -133,6 +133,13 @@ namespace quadrotors
         extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * extra_info["ang_vel_err"];
         extra_info["act_reward"] = hyper_param.act_coeff * extra_info["act_err"];
 
+        // extra_info["pos_reward"] = hyper_param.pos_coeff * std::exp(-extra_info["pos_err"]);
+        // extra_info["lin_vel_reward"] = hyper_param.lin_vel_coeff * std::exp(-extra_info["lin_vel_err"]/0.1);
+        // extra_info["ori_reward"] = hyper_param.ori_coeff * std::exp(-extra_info["ori_err"]/0.027);
+        // extra_info["ang_vel_reward"] = hyper_param.ang_vel_coeff * std::exp(-extra_info["ang_vel_err"]/0.64);
+        // extra_info["act_reward"] = hyper_param.act_coeff * std::exp(-extra_info["act_err"]/11.5);
+
+
         // extra_info["pos_reward"] = hyper_param.pos_coeff * exp(-(x.segment(0, 3) - goal_pos).squaredNorm()/30);
         // extra_info["lin_vel_reward"] = -hyper_param.lin_vel_coeff * (x.segment(3, 3)).squaredNorm();
         // extra_info["ori_reward"] = -hyper_param.ori_coeff * (x.segment(7, 2)).squaredNorm();
@@ -210,8 +217,8 @@ namespace quadrotors
 
         itr = 0;
         random_state();
-        quad_param.random_only_k();
-        // quad_param.random_all();
+        // quad_param.random_only_k();
+        quad_param.random_all();
         quad_param.set_k((Vector<4>() << 1,1,1,1).finished());
 
 

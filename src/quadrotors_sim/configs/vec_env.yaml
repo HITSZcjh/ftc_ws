@@ -1,6 +1,6 @@
 env:
   dt: 0.02
-  num_envs: 800
+  num_envs: 12000
   num_threads: 25
   delay_time: 0.00  
   add_noise: 1
@@ -9,8 +9,15 @@ rl:
 # 普通型reward
   pos_coeff: -0.0        # reward coefficient for position 
   ori_coeff: -0.5        # reward coefficient for orientation
-  lin_vel_coeff: -0.05   # reward coefficient for linear velocity
+  lin_vel_coeff: -0.15   # reward coefficient for linear velocity
   ang_vel_coeff: -0.002   # reward coefficient for angular velocity
   act_coeff: -0.0002  # reward coefficient for control actions -0.001
+
+  # exp型reward
+  # pos_coeff: -0.0        # reward coefficient for position 
+  # ori_coeff: 10.0        # reward coefficient for orientation
+  # lin_vel_coeff: 1.0   # reward coefficient for linear velocity
+  # ang_vel_coeff: 0.1   # reward coefficient for angular velocity
+  # act_coeff: 0.1  # reward coefficient for control actions -0.001
 
   max_ep_len: 250
