@@ -28,7 +28,7 @@ namespace quadrotors
 
     const Vector<NOBS> obs_normalized_max = (Vector<NOBS>() << 5,
                                              1, 1, 1, 1,
-                                             10, 10, 10,
+                                             1, 1, 1,
                                              thrust_range[1], thrust_range[1], thrust_range[1], thrust_range[1],
                                              1, 1, 5)
                                                 .finished();

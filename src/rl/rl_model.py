@@ -122,7 +122,7 @@ class RLModel:
         if self.log:
             import matplotlib.pyplot as plt
             self.obs_list = np.array(self.obs_list)
-            self.obs_list[:,:,:15] = self.obs_list[:,:,:15]*np.array((5, 1, 1, 1, 1, 10, 10, 10, 6, 6, 6, 6, 1, 1, 5))
+            self.obs_list[:,:,:15] = self.obs_list[:,:,:15]*np.array((5, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 5))
             self.obs_list = self.obs_list[:,:-1,:]
             t = np.linspace(0, self.obs_list.shape[1]*self.ts, self.obs_list.shape[1])
 

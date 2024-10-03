@@ -196,7 +196,7 @@ namespace quadrotors
         Scalar alpha = uniform_dist_(random_gen_) * M_PI/18;
         cmd(0) = std::sin(alpha) * std::cos(theta);
         cmd(1) = std::sin(alpha) * std::sin(theta);
-        cmd(2) = uniform_dist_(random_gen_) * 0.5;
+        cmd(2) = uniform_dist_(random_gen_) * 0.2;
 
 
         u_lpf.setZero();

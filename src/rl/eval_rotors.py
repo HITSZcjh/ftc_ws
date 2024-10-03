@@ -10,14 +10,14 @@ from rl_model import obs_with_k
 class PositionController:
     def __init__(self, ts) -> None:
         self.ts = ts
-        self.kp_pos = np.array([1,1,0.01], dtype=np.float32)
-        self.ki_pos = np.array([0.0,0.0,0.1], dtype=np.float32)
+        self.kp_pos = np.array([1,1,0.3], dtype=np.float32)
+        self.ki_pos = np.array([0.0,0.0,0.01], dtype=np.float32)
         self.int_pos = np.zeros_like(self.ki_pos)
         self.kp_vel = np.array([1,1,1], dtype=np.float32)
         self.ki_vel = np.array([0.2,0.2,0], dtype=np.float32)
         self.int_vel = np.zeros_like(self.ki_vel)
 
-        self.vel_max = 0.5
+        self.vel_max = 0.25
         # self.int_max_pos = 2*self.vel_max / (self.ki_pos+1e-8)
         self.acc_max = 4.0
         self.g = np.array([0,0,-9.81])
@@ -88,9 +88,13 @@ load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model02
 load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model02-10-2024_17-29-30"
 num = 1200
 
-load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model02-10-2024_21-40-27"
-load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model02-10-2024_21-40-27"
-num = 1800
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model03-10-2024_11-29-35"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model03-10-2024_11-29-35"
+num = 1000
+
+load_actor_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/actor_model03-10-2024_12-05-11"
+load_critic_model_path = "/home/jiao/rl_quad_ws/ftc_ws/src/rl/model/critic_model03-10-2024_12-05-11"
+num = 1900
 
 if __name__=="__main__":
     rospy.init_node("UAV_RL_node", anonymous=None)
@@ -107,7 +111,7 @@ if __name__=="__main__":
     last_f_target_list = []
 
     pos_controller = PositionController(ts)
-    ref_pos = np.array([0,0,3])
+    ref_pos = np.array([3,3,1])
 
     for i in range(10000):
         start_time = time.perf_counter()
@@ -120,7 +124,7 @@ if __name__=="__main__":
         nwx, nwy, velz = pos_controller.calc(ref_pos, obs[0:3], obs[3:6])
 
         state[12:15] = np.array([nwx, nwy, velz])
-        state /= np.array((5, 1, 1, 1, 1, 10, 10, 10, 3, 3, 3, 3, 1, 1, 5))
+        state /= np.array((5, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 5))
         
         model.k = np.array([1,1,1,1])
         if not obs_with_k:
